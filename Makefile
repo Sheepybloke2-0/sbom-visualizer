@@ -1,33 +1,65 @@
-.DEFAULT_GOAL := help
-.PHONY: clean help
+# Makefile for SBOM Visualizer
 
-PROJECT_NAME ?= spdxvisualizer
-PROJECT_SHA ?= $(shell git rev-parse --short HEAD)
-DOCKERFILE ?= ${PWD}/Dockerfile
-PYTEST_OPTIONS ?= -vvs
+.PHONY: help build-dev build-test build-prod test test-docker run-dev run-prod clean install lint format
 
-image: ## Build the production image
-	echo "SHA: ${PROJECT_SHA}"
-	docker build \
-		-t ${PROJECT_NAME}:latest \
-		-t ${PROJECT_NAME}:${PROJECT_SHA} \
-		-f ${DOCKERFILE} \
-		.
-
-test: image ## Build the test image
-	docker run \
-		-it \
-		--entrypoint pytest \
-		${PROJECT_NAME}:${PROJECT_SHA} \
-		${PYTEST_OPTIONS}
-
-run: image ## Build the test image
-	docker run \
-		-it \
-		${PROJECT_NAME}:${PROJECT_SHA}
-
-
-# clean: ## fully delete the build dir
-
+# Default target
 help:
-	@sed -rn 's/^([a-zA-Z_-]+):.*?## (.*)$$/"\1" "\2"/p' < $(MAKEFILE_LIST) | xargs printf "make %-20s# %s\n"
+	@echo "SBOM Visualizer - Available commands:"
+	@echo ""
+	@echo "Development:"
+	@echo "  make install     - Install dependencies"
+	@echo "  make lint        - Run linting checks"
+	@echo "  make format      - Format code with black"
+	@echo "  make test        - Run tests locally"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make build-dev   - Build development Docker image"
+	@echo "  make build-test  - Build test Docker image"
+	@echo "  make build-prod  - Build production Docker image"
+	@echo "  make test-docker - Run tests in Docker container"
+	@echo "  make run-dev     - Run development container"
+	@echo "  make run-prod    - Run production container"
+	@echo ""
+	@echo "Cleanup:"
+	@echo "  make clean       - Clean up Docker images and containers"
+
+# Local development
+install:
+	pip install -r requirements.txt
+	pip install -e .
+
+lint:
+	flake8 sbom_visualizer/ tests/
+	mypy sbom_visualizer/
+
+format:
+	black sbom_visualizer/ tests/
+	isort sbom_visualizer/ tests/
+
+test:
+	pytest tests/ -v --cov=sbom_visualizer --cov-report=term-missing
+
+# Docker commands
+build-dev:
+	docker build --target dev -t sbom-visualizer:dev .
+
+build-test:
+	docker build --target test -t sbom-visualizer:test .
+
+build-prod:
+	docker build --target prod -t sbom-visualizer:prod .
+
+test-docker:
+	docker build --target test -t sbom-visualizer:test .
+	docker run --rm -v $(PWD):/app sbom-visualizer:test
+
+run-dev:
+	docker-compose --profile dev up --build
+
+run-prod:
+	docker-compose --profile prod up --build
+
+# Cleanup
+clean:
+	docker system prune -f
+	docker rmi sbom-visualizer:dev sbom-visualizer:test sbom-visualizer:prod 2>/dev/null || true

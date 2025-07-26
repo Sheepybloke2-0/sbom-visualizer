@@ -1,0 +1,80 @@
+{
+    "spdxVersion": "SPDX-2.3",
+    "dataLicense": "CC0-1.0",
+    "SPDXID": "SPDXRef-DOCUMENT",
+    "documentName": "Sample SPDX Document",
+    "documentNamespace": "https://spdx.org/spdxdocs/sample-project-1.0.0",
+    "creationInfo": {
+        "creators": [
+            "Tool: SBOM Visualizer"
+        ],
+        "created": "2024-01-15T10:00:00Z"
+    },
+    "packages": [
+        {
+            "SPDXID": "SPDXRef-Package-requests",
+            "name": "requests",
+            "versionInfo": "2.31.0",
+            "description": "Python HTTP for Humans",
+            "licenseDeclared": "Apache-2.0",
+            "licenseConcluded": "Apache-2.0",
+            "supplier": "Organization: Python Software Foundation",
+            "homepage": "https://requests.readthedocs.io/",
+            "externalRefs": [
+                {
+                    "referenceType": "purl",
+                    "referenceLocator": "pkg:pypi/requests@2.31.0"
+                }
+            ]
+        },
+        {
+            "SPDXID": "SPDXRef-Package-flask",
+            "name": "flask",
+            "versionInfo": "3.0.0",
+            "description": "A simple framework for building complex web applications",
+            "licenseDeclared": "BSD-3-Clause",
+            "licenseConcluded": "BSD-3-Clause",
+            "supplier": "Organization: Pallets",
+            "homepage": "https://flask.palletsprojects.com/",
+            "externalRefs": [
+                {
+                    "referenceType": "purl",
+                    "referenceLocator": "pkg:pypi/flask@3.0.0"
+                }
+            ]
+        },
+        {
+            "SPDXID": "SPDXRef-Package-sqlalchemy",
+            "name": "sqlalchemy",
+            "versionInfo": "2.0.23",
+            "description": "Database Abstraction Library",
+            "licenseDeclared": "MIT",
+            "licenseConcluded": "MIT",
+            "supplier": "Organization: SQLAlchemy Authors",
+            "homepage": "https://www.sqlalchemy.org/",
+            "externalRefs": [
+                {
+                    "referenceType": "purl",
+                    "referenceLocator": "pkg:pypi/sqlalchemy@2.0.23"
+                }
+            ]
+        }
+    ],
+    "relationships": [
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElementId": "SPDXRef-Package-requests",
+            "relationshipType": "DESCRIBES"
+        },
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElementId": "SPDXRef-Package-flask",
+            "relationshipType": "DESCRIBES"
+        },
+        {
+            "spdxElementId": "SPDXRef-DOCUMENT",
+            "relatedSpdxElementId": "SPDXRef-Package-sqlalchemy",
+            "relationshipType": "DESCRIBES"
+        }
+    ]
+}

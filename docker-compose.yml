@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Development service
+  sbom-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: sbom-visualizer-dev
+    volumes:
+      - .:/app
+      - /app/sbom_visualizer/__pycache__
+      - /app/tests/__pycache__
+    environment:
+      - ENVIRONMENT=development
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    command: [ "python", "-m", "sbom_visualizer", "--help" ]
+    profiles:
+      - dev
+
+  # Test service
+  sbom-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    container_name: sbom-visualizer-test
+    volumes:
+      - .:/app
+    environment:
+      - ENVIRONMENT=test
+      - PYTHONPATH=/app
+    profiles:
+      - test
+
+  # Production service
+  sbom-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    container_name: sbom-visualizer-prod
+    environment:
+      - ENVIRONMENT=production
+      - PYTHONPATH=/app
+    ports:
+      - "8000:8000"
+    profiles:
+      - prod
+
+  # Database service (for future use)
+  mongodb:
+    image: mongo:7.0
+    container_name: sbom-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    profiles:
+      - dev
+      - prod
+
+volumes:
+  mongodb_data:

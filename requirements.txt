@@ -53,3 +53,4 @@ uritools==4.0.2
 wcwidth==0.2.8
 wrapt==1.15.0
 xmltodict==0.13.0
+pydantic>=2.6.0
