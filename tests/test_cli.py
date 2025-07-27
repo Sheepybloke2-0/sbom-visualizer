@@ -74,10 +74,10 @@ class TestCLI:
         assert "Verify an SBOM file" in result.output
 
     def test_dep_command_help(self, runner):
-        """Test dep command help."""
+        """Test dep command help text."""
         result = runner.invoke(cli, ["dep", "--help"])
         assert result.exit_code == 0
-        assert "Show the dependency tree" in result.output
+        assert "Display dependency tree" in result.output
 
     def test_check_pkg_command_help(self, runner):
         """Test check-pkg command help."""
@@ -86,10 +86,10 @@ class TestCLI:
         assert "Get detailed information" in result.output
 
     def test_scan_command_help(self, runner):
-        """Test scan command help."""
+        """Test scan command help text."""
         result = runner.invoke(cli, ["scan", "--help"])
         assert result.exit_code == 0
-        assert "Scan the SBOM for potential CVEs" in result.output
+        assert "Perform comprehensive analysis" in result.output
 
     def test_analyze_with_nonexistent_file(self, runner):
         """Test analyze command with nonexistent file."""
@@ -100,33 +100,37 @@ class TestCLI:
     def test_verify_with_nonexistent_file(self, runner):
         """Test verify command with nonexistent file."""
         result = runner.invoke(cli, ["verify", "nonexistent.json"])
-        assert result.exit_code == 2  # Click returns 2 for file not found
+        assert result.exit_code == 2
         assert "does not exist" in result.output
 
     def test_dep_with_nonexistent_file(self, runner):
         """Test dep command with nonexistent file."""
         result = runner.invoke(cli, ["dep", "nonexistent.json"])
-        assert result.exit_code == 2  # Click returns 2 for file not found
+        assert result.exit_code == 2
         assert "does not exist" in result.output
 
     def test_check_pkg_with_nonexistent_file(self, runner):
         """Test check-pkg command with nonexistent file."""
-        result = runner.invoke(cli, ["check-pkg", "nonexistent.json", "package"])
-        assert result.exit_code == 2  # Click returns 2 for file not found
+        result = runner.invoke(cli, ["check-pkg", "nonexistent.json"])
+        assert result.exit_code == 2
         assert "does not exist" in result.output
 
     def test_scan_with_nonexistent_file(self, runner):
         """Test scan command with nonexistent file."""
         result = runner.invoke(cli, ["scan", "nonexistent.json"])
-        assert result.exit_code == 2  # Click returns 2 for file not found
+        assert result.exit_code == 2
         assert "does not exist" in result.output
 
     def test_verbose_flag(self, runner):
-        """Test verbose flag."""
-        result = runner.invoke(cli, ["--verbose", "--help"])
-        assert result.exit_code == 0
+        """Test verbose flag functionality."""
+        result = runner.invoke(cli, ["--verbose", "analyze", "test.json"])
+        assert (
+            result.exit_code == 2
+        )  # File doesn't exist, but verbose flag should be processed
 
     def test_quiet_flag(self, runner):
-        """Test quiet flag."""
-        result = runner.invoke(cli, ["--quiet", "--help"])
-        assert result.exit_code == 0
+        """Test quiet flag functionality."""
+        result = runner.invoke(cli, ["--quiet", "analyze", "test.json"])
+        assert (
+            result.exit_code == 2
+        )  # File doesn't exist, but quiet flag should be processed

@@ -4,8 +4,6 @@ Dependency injection container for SBOM Visualizer.
 Manages component dependencies and provides centralized configuration.
 """
 
-from pathlib import Path
-
 from dependency_injector import containers, providers
 
 from .config import settings

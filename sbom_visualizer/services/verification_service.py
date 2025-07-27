@@ -192,50 +192,51 @@ class VerificationService:
     def _generate_validation_recommendations(
         self, verification: VerificationResult
     ) -> List[str]:
-        """
-        Generate recommendations based on verification results.
-
-        Args:
-            verification: Verification result
-
-        Returns:
-            List of recommendations
-        """
+        """Generate recommendations based on verification results."""
         recommendations = []
 
-        if not verification.is_valid:
+        # Check for missing license information
+        packages_without_licenses = [
+            pkg.name for pkg in verification.sbom_data.packages if not pkg.licenses
+        ]
+        if packages_without_licenses:
             recommendations.append(
-                "SBOM validation failed. Review and fix issues before proceeding."
+                f"Add license information for packages: "
+                f"{', '.join(packages_without_licenses[:5])}"
             )
 
-        if verification.format_compliance_score < 80:
+        # Check for missing version information
+        packages_without_versions = [
+            pkg.name
+            for pkg in verification.sbom_data.packages
+            if not pkg.version or pkg.version == "Unknown"
+        ]
+        if packages_without_versions:
             recommendations.append(
-                "Improve format compliance by following SBOM standards."
+                f"Add version information for packages: "
+                f"{', '.join(packages_without_versions[:5])}"
             )
 
-        if verification.license_compliance_score < 80:
+        # Check for missing description information
+        packages_without_descriptions = [
+            pkg.name for pkg in verification.sbom_data.packages if not pkg.description
+        ]
+        if packages_without_descriptions:
             recommendations.append(
-                "Add missing license information to improve compliance."
+                f"Add description information for packages: "
+                f"{', '.join(packages_without_descriptions[:5])}"
             )
 
-        if verification.dependency_completeness_score < 80:
+        # Check for missing dependency information
+        packages_without_dependencies = [
+            pkg.name
+            for pkg in verification.sbom_data.packages
+            if not pkg.dependencies and len(verification.sbom_data.packages) > 1
+        ]
+        if packages_without_dependencies:
             recommendations.append(
-                "Add missing dependency information for better completeness."
-            )
-
-        if verification.package_completeness_score < 80:
-            recommendations.append(
-                "Add missing package metadata for better completeness."
-            )
-
-        if verification.metadata_score < 80:
-            recommendations.append(
-                "Improve metadata quality by adding required fields."
-            )
-
-        if len(verification.warnings) > 0:
-            recommendations.append(
-                f"Address {len(verification.warnings)} warnings to improve quality."
+                f"Add dependency information for packages: "
+                f"{', '.join(packages_without_dependencies[:5])}"
             )
 
         return recommendations

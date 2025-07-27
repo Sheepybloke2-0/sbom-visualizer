@@ -206,12 +206,10 @@ class SBOMService:
             Tuple of (analysis_result, verification_result)
         """
         try:
-            # Parse the SBOM
-            sbom_data = self.parse_sbom(file_path)
-
-            # Analyze and verify in parallel (could be async in future)
-            analysis_result = self.analyze_sbom(sbom_data)
-            verification_result = self.verify_sbom(sbom_data)
+            # Parse and analyze SBOM
+            sbom_data = self.parser.parse_file(file_path)
+            analysis_result = self.analyzer.analyze(sbom_data)
+            verification_result = self.verifier.verify(sbom_data)
 
             return analysis_result, verification_result
 

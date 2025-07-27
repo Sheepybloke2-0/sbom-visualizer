@@ -4,25 +4,12 @@ API routes for SBOM Visualizer.
 FastAPI routes for web interface (Stage 2 preparation).
 """
 
-from pathlib import Path
-from typing import Optional
-
 from fastapi import APIRouter, File, HTTPException, UploadFile
-
-from ..container import container
-from ..exceptions import (
-    SBOMAnalysisError,
-    SBOMFileError,
-    SBOMParseError,
-    SBOMVerificationError,
-)
-from ..models.sbom_models import AnalysisResult, VerificationResult
-from ..services.sbom_service import SBOMService
 
 router = APIRouter(prefix="/api/v1", tags=["sbom"])
 
 
-@router.post("/analyze", response_model=AnalysisResult)
+@router.post("/analyze")
 async def analyze_sbom(file: UploadFile = File(...)):
     """
     Analyze uploaded SBOM file.
@@ -33,7 +20,7 @@ async def analyze_sbom(file: UploadFile = File(...)):
     raise HTTPException(status_code=501, detail="Not implemented yet - Stage 2 feature")
 
 
-@router.post("/verify", response_model=VerificationResult)
+@router.post("/verify")
 async def verify_sbom(file: UploadFile = File(...)):
     """
     Verify uploaded SBOM file.

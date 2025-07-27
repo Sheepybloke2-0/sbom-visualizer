@@ -87,26 +87,49 @@ class SBOMVerifier:
         """Verify license information."""
         issues = []
 
-        packages_without_licenses = []
-        invalid_licenses = []
-
-        for package in sbom_data.packages:
-            if not package.licenses:
-                packages_without_licenses.append(package.name)
-            else:
-                for license_info in package.licenses:
-                    if not license_info.identifier:
-                        invalid_licenses.append(
-                            f"{package.name}: missing license identifier"
-                        )
-
+        # Check for missing license information
+        packages_without_licenses = [
+            pkg.name for pkg in sbom_data.packages if not pkg.licenses
+        ]
         if packages_without_licenses:
             issues.append(
-                f"Packages without license information: {', '.join(packages_without_licenses)}"
+                f"Missing license information for packages: "
+                f"{', '.join(packages_without_licenses[:5])}"
             )
 
-        if invalid_licenses:
-            issues.extend(invalid_licenses)
+        # Check for missing version information
+        packages_without_versions = [
+            pkg.name
+            for pkg in sbom_data.packages
+            if not pkg.version or pkg.version == "Unknown"
+        ]
+        if packages_without_versions:
+            issues.append(
+                f"Missing version information for packages: "
+                f"{', '.join(packages_without_versions[:5])}"
+            )
+
+        # Check for missing description information
+        packages_without_descriptions = [
+            pkg.name for pkg in sbom_data.packages if not pkg.description
+        ]
+        if packages_without_descriptions:
+            issues.append(
+                f"Missing description information for packages: "
+                f"{', '.join(packages_without_descriptions[:5])}"
+            )
+
+        # Check for missing dependency information
+        packages_without_dependencies = [
+            pkg.name
+            for pkg in sbom_data.packages
+            if not pkg.dependencies and len(sbom_data.packages) > 1
+        ]
+        if packages_without_dependencies:
+            issues.append(
+                f"Missing dependency information for packages: "
+                f"{', '.join(packages_without_dependencies[:5])}"
+            )
 
         return issues
 

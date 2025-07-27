@@ -1,17 +1,15 @@
 """
-SWID format parser.
+SWID parser for SBOM Visualizer.
 
-Handles parsing of SWID (Software Identification Tags) format files.
+Provides functionality to parse SWID format SBOM files.
 """
 
 import json
 import logging
-import xml.etree.ElementTree as ET
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from ...models.sbom_models import Dependency, License, Package, SBOMData, SBOMFormat
+from ...models.sbom_models import Package, SBOMData
 
 logger = logging.getLogger(__name__)
 
@@ -19,141 +17,72 @@ logger = logging.getLogger(__name__)
 class SWIDParser:
     """Parser for SWID format SBOM files."""
 
-    def parse(self, file_path: Path) -> SBOMData:
+    def __init__(self):
+        """Initialize the SWID parser."""
+        pass
+
+    def parse(self, content: str, file_path: Path) -> SBOMData:
         """
-        Parse a SWID file.
+        Parse SWID content into SBOMData.
 
         Args:
-            file_path: Path to the SWID file
+            content: Content of the SWID file (JSON or XML)
+            file_path: Path to the original file
 
         Returns:
             Parsed SBOM data
 
         Raises:
-            ValueError: If file cannot be parsed as SWID
+            ValueError: If parsing fails
         """
-        logger.info(f"Parsing SWID file: {file_path}")
-
         try:
-            # Try to parse as XML first (most common SWID format)
-            try:
-                tree = ET.parse(file_path)
-                root = tree.getroot()
-                return self._parse_swid_xml(root)
-            except ET.ParseError:
-                # Try as JSON
-                content = file_path.read_text(encoding="utf-8")
-                data = json.loads(content)
-                return self._parse_swid_json(data)
+            # Try to parse as JSON first
+            data = json.loads(content)
+        except json.JSONDecodeError:
+            # Try to parse as XML (simplified)
+            raise ValueError("XML parsing not yet implemented for SWID")
 
-        except Exception as e:
-            logger.error(f"Failed to parse SWID file {file_path}: {e}")
-            raise ValueError(f"Failed to parse SWID file: {e}")
+        # Validate SWID format
+        if "softwareIdentity" not in data:
+            raise ValueError("Not a valid SWID file")
 
-    def _parse_swid_xml(self, root: ET.Element) -> SBOMData:
-        """
-        Parse SWID XML format.
+        # Extract document info
+        software_identity = data["softwareIdentity"]
+        document_name = software_identity.get("name", "Unknown")
+        document_version = software_identity.get("version", "Unknown")
 
-        Args:
-            root: XML root element
-
-        Returns:
-            Parsed SBOM data
-        """
-        # Extract basic information
-        tag_id = root.get("tagId", "")
-        name = root.get("name", "")
-        version = root.get("version", "")
-
-        # Extract creation info
-        created = datetime.now()
-        if root.get("versionScheme"):
-            # Try to parse version scheme for creation info
-            pass
-
-        # Convert to package
-        package = Package(
-            id=tag_id,
-            name=name,
-            version=version,
-            description=root.get("description", ""),
-            licenses=[],  # SWID doesn't typically include license info
-            dependencies=[],
-            vulnerabilities=[],
-            purl=None,
-            supplier=root.get("regid", ""),
-            homepage=None,
-            source_info=None,
-            checksums={},
-        )
+        # Parse packages (SWID typically has one main software identity)
+        packages = []
+        package = self._parse_software_identity(software_identity)
+        packages.append(package)
 
         return SBOMData(
-            format=SBOMFormat.SWID,
-            version="1.0",  # SWID version
-            document_name=name,
-            document_namespace=None,
-            created=created,
-            creator="SWID Generator",
-            packages=[package],
+            document_name=document_name,
+            document_version=document_version,
+            packages=packages,
             relationships=[],
-            metadata={
-                "tagId": tag_id,
-                "regid": root.get("regid"),
-                "versionScheme": root.get("versionScheme"),
-            },
         )
 
-    def _parse_swid_json(self, data: Dict[str, Any]) -> SBOMData:
-        """
-        Parse SWID JSON format.
+    def _parse_software_identity(self, software_identity: Dict[str, Any]) -> Package:
+        """Parse a SWID software identity into a Package."""
+        name = software_identity.get("name", "Unknown")
+        version = software_identity.get("version", "Unknown")
+        description = software_identity.get("summary", "")
 
-        Args:
-            data: SWID JSON data
+        # Parse licenses (SWID doesn't have built-in license info)
+        licenses = []
 
-        Returns:
-            Parsed SBOM data
-        """
-        # Extract software identity
-        software_identity = data.get("softwareIdentity", {})
+        # Parse vulnerabilities (SWID doesn't have built-in vulnerability info)
+        vulnerabilities = []
 
-        tag_id = software_identity.get("tagId", "")
-        name = software_identity.get("name", "")
-        version = software_identity.get("version", "")
+        # Parse dependencies (simplified)
+        dependencies = []
 
-        # Extract creation info
-        created = datetime.now()
-        if "versionScheme" in software_identity:
-            # Try to parse version scheme for creation info
-            pass
-
-        # Convert to package
-        package = Package(
-            id=tag_id,
+        return Package(
             name=name,
             version=version,
-            description=software_identity.get("description", ""),
-            licenses=[],  # SWID doesn't typically include license info
-            dependencies=[],
-            vulnerabilities=[],
-            purl=None,
-            supplier=software_identity.get("regid", ""),
-            homepage=None,
-            source_info=None,
-            checksums={},
-        )
-
-        return SBOMData(
-            format=SBOMFormat.SWID,
-            version="1.0",  # SWID version
-            document_name=name,
-            document_namespace=None,
-            created=created,
-            creator="SWID Generator",
-            packages=[package],
-            relationships=[],
-            metadata={
-                "tagId": tag_id,
-                "regid": software_identity.get("regid"),
-                "versionScheme": software_identity.get("versionScheme"),
-            },
+            description=description,
+            licenses=licenses,
+            vulnerabilities=vulnerabilities,
+            dependencies=dependencies,
         )

@@ -1,37 +1,35 @@
 """
-SBOM Parser for multiple formats.
+SBOM Parser for SBOM Visualizer.
 
-Supports parsing SPDX, CycloneDX, and SWID formats with automatic format detection.
+Provides functionality to parse SBOM files in various formats.
 """
 
 import json
 import logging
-import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Union
 
-import xmltodict
-
-from ..models.sbom_models import Dependency, License, Package, SBOMData, SBOMFormat
-from .parsers.cyclonedx_parser import CycloneDXParser
-from .parsers.spdx_parser import SPDXParser
-from .parsers.swid_parser import SWIDParser
+from ..core.parsers.cyclonedx_parser import CycloneDXParser
+from ..core.parsers.spdx_parser import SPDXParser
+from ..core.parsers.swid_parser import SWIDParser
+from ..exceptions import SBOMFileError, SBOMFormatError, SBOMParseError
+from ..models.sbom_models import SBOMData, SBOMFormat
 
 logger = logging.getLogger(__name__)
 
 
 class SBOMParser:
-    """Main SBOM parser with format detection and delegation."""
+    """Main parser for SBOM files in various formats."""
 
-    def __init__(self) -> None:
-        """Initialize the SBOM parser with format-specific parsers."""
+    def __init__(self):
+        """Initialize the SBOM parser."""
         self.spdx_parser = SPDXParser()
         self.cyclonedx_parser = CycloneDXParser()
         self.swid_parser = SWIDParser()
 
-    def parse_file(self, file_path: Path) -> SBOMData:
+    def parse_file(self, file_path: Union[str, Path]) -> SBOMData:
         """
-        Parse an SBOM file with automatic format detection.
+        Parse an SBOM file and return structured data.
 
         Args:
             file_path: Path to the SBOM file
@@ -40,101 +38,98 @@ class SBOMParser:
             Parsed SBOM data
 
         Raises:
-            FileNotFoundError: If file doesn't exist
-            ValueError: If file format cannot be detected or parsed
+            SBOMFileError: If file cannot be read
+            SBOMParseError: If file cannot be parsed
+            SBOMFormatError: If format is not supported
         """
-        logger.info(f"Parsing SBOM file: {file_path}")
+        file_path = Path(file_path)
 
-        # Check if file exists
+        # Check if file exists and is readable
         if not file_path.exists():
-            raise FileNotFoundError(f"SBOM file not found: {file_path}")
-
-        # Check if file is readable
+            raise SBOMFileError(f"File not found: {file_path}")
         if not file_path.is_file():
-            raise ValueError(f"Path is not a file: {file_path}")
+            raise SBOMFileError(f"Path is not a file: {file_path}")
 
-        # Detect format
-        format_type = self._detect_format(file_path)
-        logger.info(f"Detected format: {format_type}")
-
-        # Parse based on format
         try:
-            if format_type == SBOMFormat.SPDX:
-                return self.spdx_parser.parse(file_path)
-            elif format_type == SBOMFormat.CYCLONEDX:
-                return self.cyclonedx_parser.parse(file_path)
-            elif format_type == SBOMFormat.SWID:
-                return self.swid_parser.parse(file_path)
-            else:
-                raise ValueError(f"Unsupported SBOM format: {format_type}")
+            # Read file content
+            content = file_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            raise SBOMFileError(f"Cannot read file as text: {file_path}")
         except Exception as e:
-            logger.error(f"Failed to parse SBOM file {file_path}: {e}")
-            raise ValueError(f"Failed to parse SBOM file: {e}")
+            raise SBOMFileError(f"Error reading file {file_path}: {e}")
 
-    def _detect_format(self, file_path: Path) -> SBOMFormat:
+        # Detect format and parse
+        try:
+            format_type = self._detect_format(file_path, content)
+            return self._parse_by_format(format_type, content, file_path)
+        except Exception as e:
+            raise SBOMParseError(f"Error parsing SBOM file {file_path}: {e}")
+
+    def _detect_format(self, file_path: Path, content: str) -> SBOMFormat:
         """
-        Detect the SBOM format based on file content and extension.
+        Detect the format of the SBOM file.
 
         Args:
-            file_path: Path to the SBOM file
+            file_path: Path to the file
+            content: File content
 
         Returns:
             Detected SBOM format
+
+        Raises:
+            SBOMFormatError: If format cannot be detected
         """
-        try:
-            content = file_path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            raise ValueError(f"File is not a valid text file: {file_path}")
-
-        # Try to parse as JSON first
-        try:
-            data = json.loads(content)
-
-            # Check for SPDX format
-            if "spdxVersion" in data:
-                return SBOMFormat.SPDX
-
-            # Check for CycloneDX format
-            if "bomFormat" in data and data.get("bomFormat") == "CycloneDX":
-                return SBOMFormat.CYCLONEDX
-
-            # Check for SWID format (SWID can be JSON)
-            if "tagId" in data and "softwareIdentity" in data:
-                return SBOMFormat.SWID
-
-        except json.JSONDecodeError:
-            pass
-
-        # Try to parse as XML
-        try:
-            root = ET.fromstring(content)
-
-            # Check for SPDX XML format
-            if root.tag.endswith("SpdxDocument") or "spdx" in root.tag.lower():
-                return SBOMFormat.SPDX
-
-            # Check for CycloneDX XML format
-            if root.tag.endswith("bom") or "cyclonedx" in root.tag.lower():
-                return SBOMFormat.CYCLONEDX
-
-            # Check for SWID XML format
-            if root.tag.endswith("SoftwareIdentity") or "swid" in root.tag.lower():
-                return SBOMFormat.SWID
-
-        except ET.ParseError:
-            pass
-
-        # Check file extension as fallback
+        # Check file extension first
         extension = file_path.suffix.lower()
-        if extension in [".spdx", ".spdx.json", ".spdx.xml"]:
+        if extension in [".spdx", ".spdx.json"]:
             return SBOMFormat.SPDX
-        elif extension in [".cdx", ".cyclonedx", ".bom"]:
+        elif extension in [".cdx", ".cyclonedx", ".cyclonedx.json"]:
             return SBOMFormat.CYCLONEDX
-        elif extension in [".swid", ".swidtag"]:
+        elif extension in [".swid", ".swid.xml"]:
             return SBOMFormat.SWID
 
-        # Default to SPDX if we can't determine
-        logger.warning(
-            f"Could not detect SBOM format for {file_path}, defaulting to SPDX"
-        )
-        return SBOMFormat.SPDX
+        # Try to detect from content
+        if content:
+            try:
+                data = json.loads(content)
+                if "spdxVersion" in data:
+                    return SBOMFormat.SPDX
+                elif "bomFormat" in data and data.get("bomFormat") == "CycloneDX":
+                    return SBOMFormat.CYCLONEDX
+                elif "softwareIdentity" in data:
+                    return SBOMFormat.SWID
+            except json.JSONDecodeError:
+                # Not JSON, check for XML
+                if "<?xml" in content and "softwareIdentity" in content:
+                    return SBOMFormat.SWID
+
+        raise SBOMFormatError(f"Cannot detect SBOM format for file: {file_path}")
+
+    def _parse_by_format(
+        self, format_type: SBOMFormat, content: str, file_path: Path
+    ) -> SBOMData:
+        """
+        Parse content based on detected format.
+
+        Args:
+            format_type: Detected SBOM format
+            content: File content
+            file_path: Original file path
+
+        Returns:
+            Parsed SBOM data
+
+        Raises:
+            SBOMParseError: If parsing fails
+        """
+        try:
+            if format_type == SBOMFormat.SPDX:
+                return self.spdx_parser.parse(content, file_path)
+            elif format_type == SBOMFormat.CYCLONEDX:
+                return self.cyclonedx_parser.parse(content, file_path)
+            elif format_type == SBOMFormat.SWID:
+                return self.swid_parser.parse(content, file_path)
+            else:
+                raise SBOMParseError(f"Unsupported format: {format_type}")
+        except Exception as e:
+            raise SBOMParseError(f"Error parsing {format_type} format: {e}")

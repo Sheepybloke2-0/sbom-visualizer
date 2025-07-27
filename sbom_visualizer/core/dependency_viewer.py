@@ -1,10 +1,12 @@
 """
-Dependency Viewer for SBOM dependency tree visualization.
+Dependency viewer for SBOM Visualizer.
+
+Provides functionality to analyze and visualize dependency relationships.
 """
 
 import logging
 from collections import defaultdict
-from typing import Dict, List, Set
+from typing import Dict, List
 
 from ..models.sbom_models import DependencyTree, SBOMData
 
@@ -12,135 +14,106 @@ logger = logging.getLogger(__name__)
 
 
 class DependencyViewer:
-    """Generates dependency trees and handles interactive visualization."""
+    """Viewer for analyzing dependency relationships in SBOM data."""
 
-    def generate_tree(self, sbom_data: SBOMData) -> DependencyTree:
-        """
-        Generate dependency tree from SBOM data.
+    def __init__(self):
+        """Initialize the dependency viewer."""
+        pass
 
-        Args:
-            sbom_data: Parsed SBOM data
-
-        Returns:
-            Dependency tree structure
-        """
-        logger.info(f"Generating dependency tree for {sbom_data.document_name}")
+    def build_dependency_tree(self, sbom_data: SBOMData) -> DependencyTree:
+        """Build a dependency tree from SBOM data."""
+        if not sbom_data.packages:
+            return DependencyTree(
+                tree_structure={},
+                root_packages=[],
+                depth_analysis={},
+                circular_dependencies=[],
+            )
 
         # Build dependency graph
-        dependency_graph = self._build_dependency_graph(sbom_data)
-
-        # Find root packages (no incoming dependencies)
-        root_packages = self._find_root_packages(sbom_data, dependency_graph)
-
-        # Calculate depth for each package
-        depth_analysis = self._calculate_depth_analysis(sbom_data, dependency_graph)
-
-        # Find circular dependencies
-        circular_dependencies = self._find_circular_dependencies(dependency_graph)
-
-        # Calculate statistics
-        total_dependencies = sum(len(deps) for deps in dependency_graph.values())
-        max_depth = max(depth_analysis.values()) if depth_analysis else 0
-
-        return DependencyTree(
-            root_packages=root_packages,
-            tree_structure=dependency_graph,
-            depth_analysis=depth_analysis,
-            circular_dependencies=circular_dependencies,
-            total_dependencies=total_dependencies,
-            max_depth=max_depth,
-        )
-
-    def _build_dependency_graph(self, sbom_data: SBOMData) -> Dict[str, List[str]]:
-        """Build dependency graph from SBOM data."""
         dependency_graph = defaultdict(list)
+        reverse_graph = defaultdict(list)
+        package_map = {}
 
-        # Create package ID to name mapping
-        package_map = {package.id: package.name for package in sbom_data.packages}
-
-        # Build graph from package dependencies
         for package in sbom_data.packages:
+            package_map[package.name] = package
             for dep in package.dependencies:
                 dependency_graph[package.name].append(dep.package_name)
+                reverse_graph[dep.package_name].append(package.name)
 
-        # Add relationships from SBOM relationships
-        for rel in sbom_data.relationships:
-            if "dependsOn" in rel:
-                # This is a simplified approach - in reality you'd need to map IDs to names
-                pass
+        # Find root packages (packages with no dependencies)
+        root_packages = [
+            pkg.name for pkg in sbom_data.packages if not dependency_graph[pkg.name]
+        ]
 
-        return dict(dependency_graph)
-
-    def _find_root_packages(
-        self, sbom_data: SBOMData, dependency_graph: Dict[str, List[str]]
-    ) -> List[str]:
-        """Find packages with no incoming dependencies."""
-        all_dependents = set()
-        for deps in dependency_graph.values():
-            all_dependents.update(deps)
-
-        root_packages = []
-        for package in sbom_data.packages:
-            if package.name not in all_dependents:
-                root_packages.append(package.name)
-
-        return root_packages
-
-    def _calculate_depth_analysis(
-        self, sbom_data: SBOMData, dependency_graph: Dict[str, List[str]]
-    ) -> Dict[str, int]:
-        """Calculate depth for each package in the dependency tree."""
+        # Calculate depth for each package
         depth_analysis = {}
+        for package in sbom_data.packages:
+            depth = self._calculate_package_depth(package.name, dependency_graph)
+            depth_analysis[package.name] = depth
+
+        # Detect circular dependencies
+        circular_dependencies = self._detect_circular_dependencies(dependency_graph)
+
+        # Build tree structure
+        tree_structure = {}
+        for package in sbom_data.packages:
+            tree_structure[package.name] = {
+                "dependencies": dependency_graph[package.name],
+                "dependents": reverse_graph[package.name],
+                "depth": depth_analysis[package.name],
+            }
+
+        return DependencyTree(
+            tree_structure=tree_structure,
+            root_packages=root_packages,
+            depth_analysis=depth_analysis,
+            circular_dependencies=circular_dependencies,
+        )
+
+    def _calculate_package_depth(
+        self, package_name: str, dependency_graph: Dict[str, List[str]]
+    ) -> int:
+        """Calculate the maximum depth of a package in the dependency tree."""
         visited = set()
 
-        def calculate_depth(package_name: str, depth: int) -> int:
-            if package_name in visited:
+        def dfs(node: str, depth: int) -> int:
+            if node in visited:
                 return depth
+            visited.add(node)
 
-            visited.add(package_name)
             max_depth = depth
+            for dep in dependency_graph.get(node, []):
+                max_depth = max(max_depth, dfs(dep, depth + 1))
 
-            for dep in dependency_graph.get(package_name, []):
-                dep_depth = calculate_depth(dep, depth + 1)
-                max_depth = max(max_depth, dep_depth)
-
-            depth_analysis[package_name] = max_depth
             return max_depth
 
-        # Calculate depth for all packages
-        for package in sbom_data.packages:
-            if package.name not in visited:
-                calculate_depth(package.name, 0)
+        return dfs(package_name, 0)
 
-        return depth_analysis
-
-    def _find_circular_dependencies(
+    def _detect_circular_dependencies(
         self, dependency_graph: Dict[str, List[str]]
     ) -> List[List[str]]:
-        """Find circular dependencies in the dependency graph."""
+        """Detect circular dependencies in the dependency graph."""
         circular_deps = []
         visited = set()
         rec_stack = set()
 
-        def dfs(node: str, path: List[str]) -> None:
-            if node in rec_stack:
-                # Found a cycle
-                cycle_start = path.index(node)
-                cycle = path[cycle_start:] + [node]
-                circular_deps.append(cycle)
-                return
-
-            if node in visited:
-                return
-
+        def dfs(node: str, path: List[str]):
             visited.add(node)
             rec_stack.add(node)
             path.append(node)
 
             for neighbor in dependency_graph.get(node, []):
-                dfs(neighbor, path.copy())
+                if neighbor not in visited:
+                    dfs(neighbor, path)
+                elif neighbor in rec_stack:
+                    # Found a cycle
+                    cycle_start = path.index(neighbor)
+                    cycle = path[cycle_start:] + [neighbor]
+                    circular_deps.append(cycle)
 
             rec_stack.remove(node)
+            path.pop()
 
         for node in dependency_graph:
             if node not in visited:
@@ -148,47 +121,68 @@ class DependencyViewer:
 
         return circular_deps
 
-    def format_tree_for_cli(self, tree: DependencyTree, max_depth: int = 3) -> str:
-        """
-        Format dependency tree for CLI output.
+    def find_root_packages(self, sbom_data: SBOMData) -> List[str]:
+        """Find root packages (packages with no dependencies)."""
+        if not sbom_data.packages:
+            return []
 
-        Args:
-            tree: Dependency tree
-            max_depth: Maximum depth to display
+        dependency_graph = defaultdict(list)
+        for package in sbom_data.packages:
+            for dep in package.dependencies:
+                dependency_graph[package.name].append(dep.package_name)
 
-        Returns:
-            Formatted tree string
-        """
+        root_packages = [
+            pkg.name for pkg in sbom_data.packages if not dependency_graph[pkg.name]
+        ]
+
+        return root_packages
+
+    def calculate_max_depth(self, sbom_data: SBOMData) -> int:
+        """Calculate the maximum depth of the dependency tree."""
+        if not sbom_data.packages:
+            return 0
+
+        dependency_graph = defaultdict(list)
+        for package in sbom_data.packages:
+            for dep in package.dependencies:
+                dependency_graph[package.name].append(dep.package_name)
+
+        max_depth = 0
+        for package in sbom_data.packages:
+            depth = self._calculate_package_depth(package.name, dependency_graph)
+            max_depth = max(max_depth, depth)
+
+        return max_depth
+
+    def format_tree_for_cli(self, dependency_tree: DependencyTree) -> str:
+        """Format dependency tree for CLI output."""
+        if not dependency_tree.tree_structure:
+            return "No dependencies found."
+
         output = []
-        output.append("🌳 Dependency Tree")
+        output.append("Dependency Tree:")
         output.append("=" * 50)
 
-        # Show root packages
-        if tree.root_packages:
-            output.append("📦 Root Packages:")
-            for root in tree.root_packages:
-                output.append(f"  └── {root}")
+        # Sort packages by depth
+        sorted_packages = sorted(
+            dependency_tree.tree_structure.items(),
+            key=lambda x: dependency_tree.depth_analysis.get(x[0], 0),
+        )
 
-        # Show tree structure (limited depth)
-        output.append("\n📋 Dependency Structure:")
-        for package, deps in tree.tree_structure.items():
-            if deps:
-                output.append(f"  {package}")
-                for i, dep in enumerate(deps[:max_depth]):
-                    prefix = "  └── " if i == len(deps) - 1 else "  ├── "
-                    output.append(f"{prefix}{dep}")
-                if len(deps) > max_depth:
-                    output.append(f"  └── ... and {len(deps) - max_depth} more")
+        for package_name, package_info in sorted_packages:
+            depth = package_info["depth"]
+            indent = "  " * depth
+            output.append(f"{indent}📦 {package_name}")
 
-        # Show statistics
-        output.append(f"\n📊 Statistics:")
-        output.append(f"  Total dependencies: {tree.total_dependencies}")
-        output.append(f"  Maximum depth: {tree.max_depth}")
-        output.append(f"  Root packages: {len(tree.root_packages)}")
+            # Show dependencies
+            for dep in package_info["dependencies"]:
+                dep_indent = "  " * (depth + 1)
+                output.append(f"{dep_indent}└── {dep}")
 
-        if tree.circular_dependencies:
-            output.append(
-                f"  ⚠️  Circular dependencies: {len(tree.circular_dependencies)}"
-            )
+        # Show circular dependencies if any
+        if dependency_tree.circular_dependencies:
+            output.append("\n⚠️  Circular Dependencies Detected:")
+            for cycle in dependency_tree.circular_dependencies:
+                output.append(f"   {' -> '.join(cycle)}")
 
         return "\n".join(output)

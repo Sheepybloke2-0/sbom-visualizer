@@ -1,11 +1,12 @@
 """
-Output formatter for different output formats.
+Output formatter for SBOM Visualizer.
 
-Supports text, JSON, markdown, and HTML output with modern styling.
+Provides functionality to format analysis results in various output formats.
 """
 
+import logging
+from typing import Any, Union
 import json
-from typing import Any, Dict, Union
 
 from ..models.sbom_models import AnalysisResult, DependencyTree, PackageInfo
 
@@ -156,11 +157,9 @@ class OutputFormatter:
 
         return "\n".join(output)
 
-    def _format_json(
-        self, data: Union[AnalysisResult, DependencyTree, PackageInfo]
-    ) -> str:
+    def _format_json(self, data: Any) -> str:
         """Format data as JSON."""
-        return json.dumps(data.dict(), indent=2)
+        return json.dumps(data.model_dump(), indent=2)
 
     def _format_markdown(
         self, data: Union[AnalysisResult, DependencyTree, PackageInfo]
@@ -303,317 +302,207 @@ class OutputFormatter:
 
         return "\n".join(output)
 
-    def _format_html(
-        self, data: Union[AnalysisResult, DependencyTree, PackageInfo]
-    ) -> str:
-        """Format data as HTML with modern styling."""
-        if isinstance(data, AnalysisResult):
-            return self._format_analysis_html(data)
-        elif isinstance(data, DependencyTree):
-            return self._format_tree_html(data)
-        elif isinstance(data, PackageInfo):
-            return self._format_package_html(data)
+    def _format_html(self, result: Any) -> str:
+        """Format result as HTML with modern styling."""
+        if result is None:
+            return "<p>No data available</p>"
+
+        # Start HTML document
+        html = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SBOM Analysis Results</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                }
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 2.5em;
+                    font-weight: 300;
+                }
+                .content {
+                    padding: 30px;
+                }
+                .section {
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    border-radius: 8px;
+                    background: #f8f9fa;
+                    border-left: 4px solid #667eea;
+                }
+                .section h2 {
+                    margin-top: 0;
+                    color: #333;
+                    font-size: 1.5em;
+                }
+                .metric {
+                    display: inline-block;
+                    margin: 10px;
+                    padding: 15px 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    text-align: center;
+                    min-width: 120px;
+                }
+                .metric-value {
+                    font-size: 2em;
+                    font-weight: bold;
+                    color: #667eea;
+                }
+                .metric-label {
+                    color: #666;
+                    font-size: 0.9em;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }
+                .list-item {
+                    padding: 8px 0;
+                    border-bottom: 1px solid #eee;
+                }
+                .list-item:last-child {
+                    border-bottom: none;
+                }
+                .recommendation {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 6px;
+                    padding: 15px;
+                    margin: 10px 0;
+                }
+                .vulnerability {
+                    background: #f8d7da;
+                    border: 1px solid #f5c6cb;
+                    border-radius: 6px;
+                    padding: 10px;
+                    margin: 5px 0;
+                }
+                .license {
+                    background: #d1ecf1;
+                    border: 1px solid #bee5eb;
+                    border-radius: 6px;
+                    padding: 10px;
+                    margin: 5px 0;
+                }
+                @media (max-width: 768px) {
+                    .container {
+                        margin: 10px;
+                        border-radius: 8px;
+                    }
+                    .header {
+                        padding: 20px;
+                    }
+                    .header h1 {
+                        font-size: 2em;
+                    }
+                    .content {
+                        padding: 20px;
+                    }
+                    .metric {
+                        display: block;
+                        margin: 10px 0;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 SBOM Analysis Results</h1>
+                </div>
+                <div class="content">
+        """
+
+        # Add content based on result type
+        if hasattr(result, "total_packages"):
+            html += f"""
+                    <div class="section">
+                        <h2>📦 Package Analysis</h2>
+                        <div class="metric">
+                            <div class="metric-value">{result.total_packages}</div>
+                            <div class="metric-label">Total Packages</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">{len(result.unique_licenses)}</div>
+                            <div class="metric-label">Unique Licenses</div>
+                        </div>
+                    </div>
+            """
+
+        if hasattr(result, "vulnerability_summary") and result.vulnerability_summary:
+            html += """
+                    <div class="section">
+                        <h2>⚠️ Vulnerability Summary</h2>
+            """
+            for severity, count in result.vulnerability_summary.items():
+                if count > 0:
+                    html += f"""
+                        <div class="vulnerability">
+                            <strong>{severity.title()}:</strong> {count} vulnerabilities
+                        </div>
+                    """
+            html += "</div>"
         else:
-            return f"<html><body><pre>{str(data)}</pre></body></html>"
+            html += """
+                    <div class="section">
+                        <h2>⚠️ Vulnerability Summary</h2>
+                        <div class="vulnerability">
+                            <strong>No vulnerabilities found</strong>
+                        </div>
+                    </div>
+            """
 
-    def _format_analysis_html(self, analysis: AnalysisResult) -> str:
-        """Format analysis result as HTML."""
-        return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SBOM Analysis Report</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-        }}
-        .container {{
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }}
-        .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }}
-        .content {{
-            padding: 30px;
-        }}
-        .stat {{
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 15px 0;
-            border-left: 4px solid #667eea;
-        }}
-        .stat h3 {{
-            margin: 0 0 10px 0;
-            color: #667eea;
-        }}
-        .license-item {{
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }}
-        .recommendation {{
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 10px 0;
-        }}
-        .vulnerability {{
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 5px 0;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 SBOM Analysis Report</h1>
-        </div>
-        <div class="content">
-            <div class="stat">
-                <h3>📦 Summary</h3>
-                <p><strong>Total Packages:</strong> {analysis.total_packages}</p>
-                <p><strong>Unique Licenses:</strong> {len(analysis.unique_licenses)}</p>
-                <p><strong>Completeness Score:</strong> {analysis.completeness_score:.1f}%</p>
+        if hasattr(result, "recommendations") and result.recommendations:
+            html += """
+                    <div class="section">
+                        <h2>💡 Recommendations</h2>
+            """
+            for i, recommendation in enumerate(result.recommendations, 1):
+                html += f"""
+                        <div class="recommendation">
+                            {i}. {recommendation}
+                        </div>
+                """
+            html += "</div>"
+        else:
+            html += """
+                    <div class="section">
+                        <h2>💡 Recommendations</h2>
+                        <div class="recommendation">
+                            <strong>No recommendations available</strong>
+                        </div>
+                    </div>
+            """
+
+        # Close HTML
+        html += """
+                </div>
             </div>
-            
-            {self._format_license_distribution_html(analysis)}
-            {self._format_vulnerability_summary_html(analysis)}
-            {self._format_recommendations_html(analysis)}
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-    def _format_license_distribution_html(self, analysis: AnalysisResult) -> str:
-        """Format license distribution as HTML."""
-        if not analysis.license_distribution:
-            return ""
-
-        items = []
-        for license_name, count in sorted(
-            analysis.license_distribution.items(), key=lambda x: x[1], reverse=True
-        )[:10]:
-            items.append(
-                f'<div class="license-item"><span>{license_name}</span><span>{count}</span></div>'
-            )
-
-        return f"""
-            <div class="stat">
-                <h3>📜 License Distribution</h3>
-                {''.join(items)}
-            </div>
+        </body>
+        </html>
         """
 
-    def _format_vulnerability_summary_html(self, analysis: AnalysisResult) -> str:
-        """Format vulnerability summary as HTML."""
-        if not analysis.vulnerability_summary:
-            return ""
-
-        items = []
-        for severity, count in analysis.vulnerability_summary.items():
-            items.append(
-                f'<div class="vulnerability"><strong>{severity}:</strong> {count}</div>'
-            )
-
-        return f"""
-            <div class="stat">
-                <h3>⚠️ Vulnerability Summary</h3>
-                {''.join(items)}
-            </div>
-        """
-
-    def _format_recommendations_html(self, analysis: AnalysisResult) -> str:
-        """Format recommendations as HTML."""
-        if not analysis.recommendations:
-            return ""
-
-        items = []
-        for i, rec in enumerate(analysis.recommendations, 1):
-            items.append(f'<div class="recommendation">{i}. {rec}</div>')
-
-        return f"""
-            <div class="stat">
-                <h3>💡 Recommendations</h3>
-                {''.join(items)}
-            </div>
-        """
-
-    def _format_tree_html(self, tree: DependencyTree) -> str:
-        """Format dependency tree as HTML."""
-        return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dependency Tree</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-        }}
-        .container {{
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }}
-        .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }}
-        .content {{
-            padding: 30px;
-        }}
-        .stat {{
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 15px 0;
-            border-left: 4px solid #667eea;
-        }}
-        .dependency-item {{
-            padding: 5px 0;
-            border-left: 2px solid #eee;
-            margin-left: 20px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🌳 Dependency Tree</h1>
-        </div>
-        <div class="content">
-            <div class="stat">
-                <h3>📊 Statistics</h3>
-                <p><strong>Total dependencies:</strong> {tree.total_dependencies}</p>
-                <p><strong>Maximum depth:</strong> {tree.max_depth}</p>
-                <p><strong>Root packages:</strong> {len(tree.root_packages)}</p>
-                {f'<p><strong>Circular dependencies:</strong> {len(tree.circular_dependencies)}</p>' if tree.circular_dependencies else ''}
-            </div>
-            
-            <div class="stat">
-                <h3>📦 Root Packages</h3>
-                {''.join(f'<div class="dependency-item">└── {root}</div>' for root in tree.root_packages)}
-            </div>
-            
-            <div class="stat">
-                <h3>📋 Dependency Structure</h3>
-                {''.join(f'<div><strong>{package}</strong>{''.join(f"<div class='dependency-item'>├── {dep}</div>" for dep in deps[:5])}{f"<div class='dependency-item'>└── ... and {len(deps) - 5} more</div>" if len(deps) > 5 else ""}</div>' for package, deps in list(tree.tree_structure.items())[:10])}
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-    def _format_package_html(self, package: PackageInfo) -> str:
-        """Format package info as HTML."""
-        return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Package: {package.name}</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-        }}
-        .container {{
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            overflow: hidden;
-        }}
-        .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }}
-        .content {{
-            padding: 30px;
-        }}
-        .info-item {{
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 15px 0;
-            border-left: 4px solid #667eea;
-        }}
-        .dependency-item {{
-            padding: 5px 0;
-            border-left: 2px solid #eee;
-            margin-left: 20px;
-        }}
-        .vulnerability-item {{
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 5px 0;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📦 Package: {package.name}</h1>
-        </div>
-        <div class="content">
-            <div class="info-item">
-                <h3>📋 Basic Information</h3>
-                {f'<p><strong>Version:</strong> {package.version}</p>' if package.version else ''}
-                {f'<p><strong>License:</strong> {package.license}</p>' if package.license else ''}
-                {f'<p><strong>Supplier:</strong> {package.supplier}</p>' if package.supplier else ''}
-                {f'<p><strong>Homepage:</strong> <a href="{package.homepage}">{package.homepage}</a></p>' if package.homepage else ''}
-                {f'<p><strong>Description:</strong> {package.description}</p>' if package.description else ''}
-            </div>
-            
-            {f'<div class="info-item"><h3>🔗 Dependencies ({len(package.dependencies)})</h3>{''.join(f"<div class='dependency-item'>- {dep}</div>" for dep in package.dependencies[:10])}{f"<div class='dependency-item'>... and {len(package.dependencies) - 10} more</div>" if len(package.dependencies) > 10 else ""}</div>' if package.dependencies else ''}
-            
-            {f'<div class="info-item"><h3>⚠️ Vulnerabilities ({len(package.vulnerabilities)})</h3>{''.join(f"<div class='vulnerability-item'>{vuln}</div>" for vuln in package.vulnerabilities[:5])}{f"<div class='vulnerability-item'>... and {len(package.vulnerabilities) - 5} more</div>" if len(package.vulnerabilities) > 5 else ""}</div>' if package.vulnerabilities else ''}
-        </div>
-    </div>
-</body>
-</html>
-"""
+        return html

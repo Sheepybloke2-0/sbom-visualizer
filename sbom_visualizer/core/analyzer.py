@@ -1,12 +1,14 @@
 """
-SBOM Analyzer for comprehensive analysis of SBOM data.
+SBOM Analyzer for SBOM Visualizer.
+
+Provides functionality to analyze SBOM data and generate insights.
 """
 
 import logging
-from collections import Counter, defaultdict
-from typing import Dict, List
+from collections import Counter
+from typing import Dict, List, Tuple
 
-from ..models.sbom_models import AnalysisResult, SBOMData
+from ..models.sbom_models import AnalysisResult, Package, SBOMData
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +34,21 @@ class SBOMAnalyzer:
         # License analysis
         unique_licenses, license_distribution = self._analyze_licenses(sbom_data)
 
-        # Dependency analysis
-        dependency_depth = self._analyze_dependencies(sbom_data)
+        # Calculate dependency depth analysis
+        dependency_depth = {}
+        for package in sbom_data.packages:
+            depth = self._calculate_dependency_depth(package, sbom_data.packages)
+            dependency_depth[package.name] = depth
 
-        # Vulnerability analysis
-        vulnerability_summary = self._analyze_vulnerabilities(sbom_data)
-
-        # Completeness analysis
-        completeness_score = self._calculate_completeness(sbom_data)
+        # Calculate vulnerability summary
+        vulnerability_summary = self._calculate_vulnerability_summary(
+            sbom_data.packages
+        )
 
         # Generate recommendations
-        recommendations = self._generate_recommendations(sbom_data, completeness_score)
+        recommendations = self._generate_recommendations(
+            total_packages, unique_licenses, dependency_depth, vulnerability_summary
+        )
 
         return AnalysisResult(
             total_packages=total_packages,
@@ -50,7 +56,7 @@ class SBOMAnalyzer:
             license_distribution=license_distribution,
             dependency_depth=dependency_depth,
             vulnerability_summary=vulnerability_summary,
-            completeness_score=completeness_score,
+            completeness_score=self._calculate_completeness(sbom_data),
             recommendations=recommendations,
         )
 
@@ -69,52 +75,36 @@ class SBOMAnalyzer:
 
         return list(unique_licenses), dict(license_counter)
 
-    def _analyze_dependencies(self, sbom_data: SBOMData) -> Dict[str, int]:
-        """Analyze dependency depth for each package."""
-        dependency_depth = {}
-
-        # Build dependency graph
-        dependency_graph = defaultdict(list)
-        for package in sbom_data.packages:
-            for dep in package.dependencies:
-                dependency_graph[package.id].append(dep.package_id)
-
-        # Calculate depth for each package
-        for package in sbom_data.packages:
-            depth = self._calculate_package_depth(package.id, dependency_graph)
-            dependency_depth[package.name] = depth
-
-        return dependency_depth
-
-    def _calculate_package_depth(
-        self, package_id: str, dependency_graph: Dict[str, List[str]]
+    def _calculate_dependency_depth(
+        self, package: Package, all_packages: list[Package]
     ) -> int:
-        """Calculate the maximum depth of a package in the dependency tree."""
-        visited = set()
+        """Calculate the maximum depth of dependencies for a package."""
+        if not package.dependencies:
+            return 0
 
-        def dfs(node: str, depth: int) -> int:
-            if node in visited:
-                return depth
-            visited.add(node)
+        max_depth = 0
+        for dep in package.dependencies:
+            # Find the dependent package
+            dep_package = next(
+                (p for p in all_packages if p.name == dep.package_name), None
+            )
+            if dep_package:
+                depth = self._calculate_dependency_depth(dep_package, all_packages)
+                max_depth = max(max_depth, depth + 1)
 
-            max_depth = depth
-            for dep in dependency_graph.get(node, []):
-                max_depth = max(max_depth, dfs(dep, depth + 1))
+        return max_depth
 
-            return max_depth
-
-        return dfs(package_id, 0)
-
-    def _analyze_vulnerabilities(self, sbom_data: SBOMData) -> Dict[str, int]:
-        """Analyze vulnerability distribution by severity."""
-        vulnerability_counter = Counter()
-
-        for package in sbom_data.packages:
-            for vuln in package.vulnerabilities:
-                severity = vuln.severity or "unknown"
-                vulnerability_counter[severity] += 1
-
-        return dict(vulnerability_counter)
+    def _calculate_vulnerability_summary(
+        self, packages: list[Package]
+    ) -> dict[str, int]:
+        """Calculate vulnerability summary by severity."""
+        severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+        for package in packages:
+            for vulnerability in package.vulnerabilities:
+                severity = vulnerability.severity.lower()
+                if severity in severity_counts:
+                    severity_counts[severity] += 1
+        return severity_counts
 
     def _calculate_completeness(self, sbom_data: SBOMData) -> float:
         """Calculate SBOM completeness score (0-100)."""
@@ -154,53 +144,48 @@ class SBOMAnalyzer:
         return (total_score / max_score) * 100
 
     def _generate_recommendations(
-        self, sbom_data: SBOMData, completeness_score: float
-    ) -> List[str]:
-        """Generate recommendations based on analysis."""
+        self,
+        total_packages: int,
+        unique_licenses: list[str],
+        dependency_depth: dict[str, int],
+        vulnerability_summary: dict[str, int],
+    ) -> list[str]:
+        """Generate recommendations based on analysis results."""
         recommendations = []
 
-        # Completeness recommendations
-        if completeness_score < 50:
+        if total_packages == 0:
             recommendations.append(
                 "SBOM completeness is low. Consider adding missing package information."
             )
-        elif completeness_score < 80:
-            recommendations.append(
-                "SBOM completeness is moderate. Consider adding more detailed package information."
-            )
+            return recommendations
 
         # License recommendations
-        packages_without_licenses = [
-            p.name for p in sbom_data.packages if not p.licenses
-        ]
-        if packages_without_licenses:
+        if len(unique_licenses) == 0:
             recommendations.append(
-                f"Add license information for packages: {', '.join(packages_without_licenses[:5])}"
+                "No license information found. Consider adding license details."
+            )
+        elif len(unique_licenses) > 10:
+            recommendations.append(
+                "High license diversity detected. Consider license compliance review."
             )
 
-        # Dependency recommendations
-        packages_without_deps = [
-            p.name
-            for p in sbom_data.packages
-            if not p.dependencies and len(sbom_data.packages) > 1
-        ]
-        if packages_without_deps:
+        # Dependency depth recommendations
+        max_depth = max(dependency_depth.values()) if dependency_depth else 0
+        if max_depth > 5:
             recommendations.append(
-                f"Add dependency information for packages: {', '.join(packages_without_deps[:5])}"
-            )
-
-        # Version recommendations
-        packages_without_version = [p.name for p in sbom_data.packages if not p.version]
-        if packages_without_version:
-            recommendations.append(
-                f"Add version information for packages: {', '.join(packages_without_version[:5])}"
+                "Deep dependency tree detected. Consider dependency optimization."
             )
 
         # Vulnerability recommendations
-        total_vulnerabilities = sum(len(p.vulnerabilities) for p in sbom_data.packages)
+        total_vulnerabilities = sum(vulnerability_summary.values())
         if total_vulnerabilities > 0:
-            recommendations.append(
-                f"Review {total_vulnerabilities} vulnerabilities found in the SBOM."
-            )
+            if vulnerability_summary.get("critical", 0) > 0:
+                recommendations.append(
+                    "Critical vulnerabilities detected. Immediate action required."
+                )
+            elif vulnerability_summary.get("high", 0) > 5:
+                recommendations.append(
+                    "Multiple high-severity vulnerabilities. Review security posture."
+                )
 
         return recommendations
