@@ -1,14 +1,132 @@
+# Multi-stage Dockerfile for SBOM Visualizer
+# Supports dev, test, and prod environments
 
-FROM python:3.10.4-slim as base
+# Base stage with common dependencies
+FROM python:3.12-slim as base
 
-RUN apt-get update
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-WORKDIR /workspace
+# Install system dependencies and uv
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libxml2-dev \
+    libxslt-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv
 
-COPY requirements.txt /workspace/requirements.txt
+# Set work directory
+WORKDIR /app
 
-RUN pip install -r requirements.txt
+# Copy requirements first for better caching
+COPY requirements.txt .
 
-COPY . /workspace/
+# Install Python dependencies using uv
+RUN uv pip install --system --no-cache -r requirements.txt
 
-ENTRYPOINT [ "spdx_visualizer" ]
+# Copy application code
+COPY . .
+
+# Install the application in development mode using uv
+RUN uv pip install --system -e .
+
+# Development stage
+FROM base as dev
+
+# Install additional system dependencies for development
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    vim \
+    nano \
+    tree \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install development dependencies using uv
+RUN uv pip install --system --no-cache \
+    pytest \
+    pytest-cov \
+    pytest-mock \
+    black \
+    flake8 \
+    mypy \
+    isort \
+    pre-commit \
+    ipython \
+    ipdb \
+    watchdog \
+    fastapi \
+    uvicorn[standard] \
+    httpx
+
+# Set development environment
+ENV ENVIRONMENT=development \
+    PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create development user
+RUN useradd --create-home --shell /bin/bash --uid 1000 devuser && \
+    chown -R devuser:devuser /app
+
+# Switch to development user
+USER devuser
+
+# Expose port for development server
+EXPOSE 8000
+
+# Create development workspace
+WORKDIR /app
+
+# Default command for development (interactive shell)
+CMD ["/bin/bash"]
+
+# Test stage
+FROM base as test
+
+# Install test dependencies using uv
+RUN uv pip install --system --no-cache \
+    pytest \
+    pytest-cov \
+    pytest-mock
+
+# Set test environment
+ENV ENVIRONMENT=test
+
+# Copy test files
+COPY tests/ ./tests/
+COPY examples/ ./examples/
+
+# Create test user
+RUN useradd --create-home --shell /bin/bash testuser
+USER testuser
+
+# Default command for tests
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=sbom_visualizer", "--cov-report=term-missing"]
+
+# Production stage
+FROM base as prod
+
+# Install production dependencies only using uv
+RUN uv pip install --system --no-cache \
+    gunicorn \
+    uvicorn
+
+# Set production environment
+ENV ENVIRONMENT=production
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash appuser
+USER appuser
+
+# Expose port for production server
+EXPOSE 8000
+
+# Default command for production - show help
+CMD ["sbom-analyzer", "--help"]
