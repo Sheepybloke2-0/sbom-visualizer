@@ -10,19 +10,23 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from .core.parser import SBOMParser
-from .core.verifier import SBOMVerifier
-from .core.analyzer import SBOMAnalyzer
-from .core.dependency_viewer import DependencyViewer
-from .core.package_checker import PackageChecker
+from .services.sbom_service import SBOMService
 from .utils.output_formatter import OutputFormatter
 from .utils.logger import setup_logging
+from .config import settings
+from .container import container
+from .exceptions import (
+    SBOMFileError,
+    SBOMParseError,
+    SBOMAnalysisError,
+    SBOMVerificationError,
+)
 
 
 @click.group()
 @click.option("--verbose", is_flag=True, help="Increase the log level to DEBUG.")
 @click.option("--quiet", is_flag=True, help="Decrease the log level to WARN.")
-@click.version_option(version="0.1.0", prog_name="sbom-analyzer")
+@click.version_option(version=settings.version, prog_name=settings.app_name)
 def cli(verbose: bool, quiet: bool) -> None:
     """
     SBOM Visualizer - AI-powered SBOM analysis and visualization tool.
@@ -61,16 +65,13 @@ def analyze(file: Path, output: Optional[Path], output_type: str) -> None:
     Default report is human-readable text formatted for a CLI.
     """
     try:
-        # Parse the SBOM file
-        parser = SBOMParser()
-        sbom_data = parser.parse_file(file)
-
-        # Analyze the SBOM
-        analyzer = SBOMAnalyzer()
-        analysis_result = analyzer.analyze(sbom_data)
+        # Use service layer for business logic
+        service = container.sbom_service()
+        sbom_data = service.parse_sbom(file)
+        analysis_result = service.analyze_sbom(sbom_data)
 
         # Format and output the result
-        formatter = OutputFormatter()
+        formatter = container.output_formatter()
         formatted_output = formatter.format(analysis_result, output_type)
 
         if output:
@@ -79,11 +80,14 @@ def analyze(file: Path, output: Optional[Path], output_type: str) -> None:
         else:
             click.echo(formatted_output)
 
-    except FileNotFoundError as e:
-        click.echo(f"Error analyzing SBOM: {e}", err=True)
+    except SBOMFileError as e:
+        click.echo(f"File error: {e.message}", err=True)
         sys.exit(1)
-    except ValueError as e:
-        click.echo(f"Error analyzing SBOM: {e}", err=True)
+    except SBOMParseError as e:
+        click.echo(f"Parse error: {e.message}", err=True)
+        sys.exit(1)
+    except SBOMAnalysisError as e:
+        click.echo(f"Analysis error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error analyzing SBOM: {e}", err=True)
@@ -99,13 +103,10 @@ def verify(file: Path) -> None:
     Reports any potential issues with the SBOM format, license issues, and dependency completeness.
     """
     try:
-        # Parse the SBOM file
-        parser = SBOMParser()
-        sbom_data = parser.parse_file(file)
-
-        # Verify the SBOM
-        verifier = SBOMVerifier()
-        verification_result = verifier.verify(sbom_data)
+        # Use service layer for business logic
+        service = container.sbom_service()
+        sbom_data = service.parse_sbom(file)
+        verification_result = service.verify_sbom(sbom_data)
 
         # Display verification results
         if verification_result.is_valid:
@@ -116,11 +117,14 @@ def verify(file: Path) -> None:
         for issue in verification_result.issues:
             click.echo(f"  - {issue}")
 
-    except FileNotFoundError as e:
-        click.echo(f"Error verifying SBOM: {e}", err=True)
+    except SBOMFileError as e:
+        click.echo(f"File error: {e.message}", err=True)
         sys.exit(1)
-    except ValueError as e:
-        click.echo(f"Error verifying SBOM: {e}", err=True)
+    except SBOMParseError as e:
+        click.echo(f"Parse error: {e.message}", err=True)
+        sys.exit(1)
+    except SBOMVerificationError as e:
+        click.echo(f"Verification error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error verifying SBOM: {e}", err=True)
@@ -151,16 +155,13 @@ def dep(file: Path, output: Optional[Path], output_type: str) -> None:
     Tree shows package name and version and is interactive for larger SBOMs.
     """
     try:
-        # Parse the SBOM file
-        parser = SBOMParser()
-        sbom_data = parser.parse_file(file)
-
-        # Generate dependency tree
-        viewer = DependencyViewer()
-        tree_data = viewer.generate_tree(sbom_data)
+        # Use service layer for business logic
+        service = container.sbom_service()
+        sbom_data = service.parse_sbom(file)
+        tree_data = service.get_dependency_tree(sbom_data)
 
         # Format and output the result
-        formatter = OutputFormatter()
+        formatter = container.output_formatter()
         formatted_output = formatter.format(tree_data, output_type)
 
         if output:
@@ -169,11 +170,14 @@ def dep(file: Path, output: Optional[Path], output_type: str) -> None:
         else:
             click.echo(formatted_output)
 
-    except FileNotFoundError as e:
-        click.echo(f"Error generating dependency tree: {e}", err=True)
+    except SBOMFileError as e:
+        click.echo(f"File error: {e.message}", err=True)
         sys.exit(1)
-    except ValueError as e:
-        click.echo(f"Error generating dependency tree: {e}", err=True)
+    except SBOMParseError as e:
+        click.echo(f"Parse error: {e.message}", err=True)
+        sys.exit(1)
+    except SBOMAnalysisError as e:
+        click.echo(f"Analysis error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error generating dependency tree: {e}", err=True)
@@ -190,13 +194,10 @@ def check_pkg(file: Path, package_name: str) -> None:
     Also supports fuzzy matching for the package name.
     """
     try:
-        # Parse the SBOM file
-        parser = SBOMParser()
-        sbom_data = parser.parse_file(file)
-
-        # Check package details
-        checker = PackageChecker()
-        package_info = checker.get_package_info(sbom_data, package_name)
+        # Use service layer for business logic
+        service = container.sbom_service()
+        sbom_data = service.parse_sbom(file)
+        package_info = service.get_package_info(sbom_data, package_name)
 
         if package_info:
             click.echo(f"📦 Package: {package_info.name}")
@@ -208,11 +209,14 @@ def check_pkg(file: Path, package_name: str) -> None:
         else:
             click.echo(f"❌ Package '{package_name}' not found in SBOM")
 
-    except FileNotFoundError as e:
-        click.echo(f"Error checking package: {e}", err=True)
+    except SBOMFileError as e:
+        click.echo(f"File error: {e.message}", err=True)
         sys.exit(1)
-    except ValueError as e:
-        click.echo(f"Error checking package: {e}", err=True)
+    except SBOMParseError as e:
+        click.echo(f"Parse error: {e.message}", err=True)
+        sys.exit(1)
+    except SBOMAnalysisError as e:
+        click.echo(f"Analysis error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error checking package: {e}", err=True)
@@ -243,20 +247,20 @@ def scan(file: Path, output: Optional[Path], output_type: str) -> None:
     This will be implemented as part of Stage 4.
     """
     try:
-        # Parse the SBOM file
-        parser = SBOMParser()
-        sbom_data = parser.parse_file(file)
+        # Use service layer for business logic
+        service = container.sbom_service()
+        sbom_data = service.parse_sbom(file)
 
         # For now, just show a message about Stage 4 implementation
         click.echo("🔍 CVE scanning is planned for Stage 4 (AI Integration)")
         click.echo("This feature will be available in a future release.")
         click.echo(f"📦 Found {len(sbom_data.packages)} packages to scan")
 
-    except FileNotFoundError as e:
-        click.echo(f"Error scanning SBOM: {e}", err=True)
+    except SBOMFileError as e:
+        click.echo(f"File error: {e.message}", err=True)
         sys.exit(1)
-    except ValueError as e:
-        click.echo(f"Error scanning SBOM: {e}", err=True)
+    except SBOMParseError as e:
+        click.echo(f"Parse error: {e.message}", err=True)
         sys.exit(1)
     except Exception as e:
         click.echo(f"Unexpected error scanning SBOM: {e}", err=True)

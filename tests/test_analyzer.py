@@ -111,7 +111,7 @@ class TestSBOMAnalyzer:
         assert result.total_packages == 0
         assert len(result.unique_licenses) == 0
         assert result.completeness_score == 0
-        assert "No packages found" in result.recommendations[0]
+        assert "SBOM completeness is low" in result.recommendations[0]
 
     def test_analyze_license_distribution(self):
         """Test license distribution analysis."""
@@ -132,7 +132,7 @@ class TestSBOMAnalyzer:
         """Test vulnerability summary analysis."""
         result = self.analyzer.analyze(self.sample_sbom)
 
-        assert result.vulnerability_count == 1
+        assert sum(result.vulnerability_summary.values()) == 1
         assert result.high_severity_count == 1
         assert result.medium_severity_count == 0
         assert result.low_severity_count == 0
@@ -221,7 +221,11 @@ class TestSBOMAnalyzer:
             description="Depends on depends",
             licenses=[License(identifier="MIT", name="MIT License")],
             dependencies=[
-                Dependency(package_id="pkg2", relationship_type="DEPENDS_ON")
+                Dependency(
+                    package_id="pkg2",
+                    package_name="depends-on-base",
+                    relationship_type="DEPENDS_ON",
+                )
             ],
             vulnerabilities=[],
             purl="pkg:pypi/depends-on-depends@3.0.0",

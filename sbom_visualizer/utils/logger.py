@@ -8,7 +8,7 @@ from typing import Optional
 
 
 def setup_logging(
-    level: int = logging.INFO,
+    level: int = None,
     format_string: Optional[str] = None,
     use_colors: bool = True,
 ) -> None:
@@ -20,8 +20,13 @@ def setup_logging(
         format_string: Custom format string
         use_colors: Whether to use colored output
     """
+    from ..config import settings
+
+    if level is None:
+        level = getattr(logging, settings.log_level.upper(), logging.INFO)
+
     if format_string is None:
-        format_string = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        format_string = settings.log_format
 
     # Create formatter
     if use_colors:
