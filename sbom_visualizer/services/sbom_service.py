@@ -8,26 +8,25 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from ..core.parser import SBOMParser
+from ..config import settings
 from ..core.analyzer import SBOMAnalyzer
-from ..core.verifier import SBOMVerifier
 from ..core.dependency_viewer import DependencyViewer
 from ..core.package_checker import PackageChecker
+from ..core.parser import SBOMParser
+from ..core.verifier import SBOMVerifier
+from ..exceptions import (
+    SBOMAnalysisError,
+    SBOMFileError,
+    SBOMParseError,
+    SBOMVerificationError,
+)
 from ..models.sbom_models import (
-    SBOMData,
     AnalysisResult,
-    VerificationResult,
     DependencyTree,
     PackageInfo,
+    SBOMData,
+    VerificationResult,
 )
-from ..exceptions import (
-    SBOMParseError,
-    SBOMAnalysisError,
-    SBOMVerificationError,
-    SBOMFileError,
-)
-from ..config import settings
-
 
 logger = logging.getLogger(__name__)
 

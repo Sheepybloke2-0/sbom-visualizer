@@ -7,4 +7,4 @@ files in various formats including SPDX, CycloneDX, and SWID.
 
 __version__ = "0.1.0"
 __author__ = "SBOM Visualizer Team"
-__description__ = "AI-powered SBOM analysis and visualization tool" 
+__description__ = "AI-powered SBOM analysis and visualization tool"

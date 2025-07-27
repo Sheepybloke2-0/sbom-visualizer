@@ -2,21 +2,22 @@
 Tests for output formatter functionality.
 """
 
-import pytest
 import json
 from datetime import datetime
 from unittest.mock import MagicMock
 
-from sbom_visualizer.utils.output_formatter import OutputFormatter
+import pytest
+
 from sbom_visualizer.models.sbom_models import (
     AnalysisResult,
     DependencyTree,
+    License,
+    Package,
     PackageInfo,
     SBOMData,
     SBOMFormat,
-    Package,
-    License,
 )
+from sbom_visualizer.utils.output_formatter import OutputFormatter
 
 
 class TestOutputFormatter:

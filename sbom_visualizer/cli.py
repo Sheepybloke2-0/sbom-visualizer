@@ -4,23 +4,24 @@ CLI interface for SBOM Visualizer.
 Provides command-line tools for analyzing, verifying, and visualizing SBOM files.
 """
 
-import click
 import logging
 import sys
 from pathlib import Path
 from typing import Optional
 
-from .services.sbom_service import SBOMService
-from .utils.output_formatter import OutputFormatter
-from .utils.logger import setup_logging
+import click
+
 from .config import settings
 from .container import container
 from .exceptions import (
+    SBOMAnalysisError,
     SBOMFileError,
     SBOMParseError,
-    SBOMAnalysisError,
     SBOMVerificationError,
 )
+from .services.sbom_service import SBOMService
+from .utils.logger import setup_logging
+from .utils.output_formatter import OutputFormatter
 
 
 @click.group()

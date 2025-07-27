@@ -4,9 +4,10 @@ Configuration management for SBOM Visualizer.
 Handles environment variables, application settings, and configuration validation.
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field
 from typing import Optional
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

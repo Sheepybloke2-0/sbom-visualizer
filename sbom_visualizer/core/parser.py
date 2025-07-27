@@ -8,14 +8,14 @@ import json
 import logging
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import xmltodict
 
-from ..models.sbom_models import SBOMData, SBOMFormat, Package, License, Dependency
-from .parsers.spdx_parser import SPDXParser
+from ..models.sbom_models import Dependency, License, Package, SBOMData, SBOMFormat
 from .parsers.cyclonedx_parser import CycloneDXParser
+from .parsers.spdx_parser import SPDXParser
 from .parsers.swid_parser import SWIDParser
-
 
 logger = logging.getLogger(__name__)
 

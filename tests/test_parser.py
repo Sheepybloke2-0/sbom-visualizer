@@ -2,14 +2,15 @@
 Tests for SBOM parser functionality.
 """
 
-import pytest
-import tempfile
 import json
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from sbom_visualizer.core.parser import SBOMParser
-from sbom_visualizer.models.sbom_models import SBOMFormat, SBOMData, Package, License
+from sbom_visualizer.models.sbom_models import License, Package, SBOMData, SBOMFormat
 
 
 class TestSBOMParser:

@@ -4,19 +4,20 @@ API routes for SBOM Visualizer.
 FastAPI routes for web interface (Stage 2 preparation).
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
 from pathlib import Path
 from typing import Optional
 
-from ..services.sbom_service import SBOMService
-from ..models.sbom_models import AnalysisResult, VerificationResult
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from ..container import container
 from ..exceptions import (
+    SBOMAnalysisError,
     SBOMFileError,
     SBOMParseError,
-    SBOMAnalysisError,
     SBOMVerificationError,
 )
-from ..container import container
+from ..models.sbom_models import AnalysisResult, VerificationResult
+from ..services.sbom_service import SBOMService
 
 router = APIRouter(prefix="/api/v1", tags=["sbom"])
 

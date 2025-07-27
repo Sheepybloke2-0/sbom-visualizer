@@ -4,19 +4,20 @@ Dependency injection container for SBOM Visualizer.
 Manages component dependencies and provides centralized configuration.
 """
 
-from dependency_injector import containers, providers
 from pathlib import Path
 
-from .core.parser import SBOMParser
+from dependency_injector import containers, providers
+
+from .config import settings
 from .core.analyzer import SBOMAnalyzer
-from .core.verifier import SBOMVerifier
 from .core.dependency_viewer import DependencyViewer
 from .core.package_checker import PackageChecker
-from .services.sbom_service import SBOMService
+from .core.parser import SBOMParser
+from .core.verifier import SBOMVerifier
 from .services.analysis_service import AnalysisService
+from .services.sbom_service import SBOMService
 from .services.verification_service import VerificationService
 from .utils.output_formatter import OutputFormatter
-from .config import settings
 
 
 class Container(containers.DeclarativeContainer):

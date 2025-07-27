@@ -5,8 +5,7 @@ SBOM Verifier for format validation and completeness checking.
 import logging
 from typing import List
 
-from ..models.sbom_models import SBOMData, VerificationResult, SBOMFormat
-
+from ..models.sbom_models import SBOMData, SBOMFormat, VerificationResult
 
 logger = logging.getLogger(__name__)
 

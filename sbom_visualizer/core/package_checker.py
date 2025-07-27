@@ -4,10 +4,9 @@ Package Checker for detailed package information and fuzzy matching.
 
 import logging
 from difflib import get_close_matches
-from typing import Optional, List
+from typing import List, Optional
 
-from ..models.sbom_models import SBOMData, PackageInfo, Package
-
+from ..models.sbom_models import Package, PackageInfo, SBOMData
 
 logger = logging.getLogger(__name__)
 

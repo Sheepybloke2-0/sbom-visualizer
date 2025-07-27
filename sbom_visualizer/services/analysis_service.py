@@ -6,13 +6,12 @@ Provides specialized analysis operations and insights.
 
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from ..core.analyzer import SBOMAnalyzer
 from ..core.dependency_viewer import DependencyViewer
-from ..models.sbom_models import SBOMData, AnalysisResult, DependencyTree
 from ..exceptions import SBOMAnalysisError
-
+from ..models.sbom_models import AnalysisResult, DependencyTree, SBOMData
 
 logger = logging.getLogger(__name__)
 

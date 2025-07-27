@@ -2,17 +2,18 @@
 Tests for SBOM analyzer functionality.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import MagicMock
 
+import pytest
+
 from sbom_visualizer.core.analyzer import SBOMAnalyzer
 from sbom_visualizer.models.sbom_models import (
+    Dependency,
+    License,
+    Package,
     SBOMData,
     SBOMFormat,
-    Package,
-    License,
-    Dependency,
     Vulnerability,
 )
 

@@ -5,12 +5,11 @@ Provides specialized verification operations and compliance checking.
 """
 
 import logging
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from ..core.verifier import SBOMVerifier
-from ..models.sbom_models import SBOMData, VerificationResult
 from ..exceptions import SBOMVerificationError
-
+from ..models.sbom_models import SBOMData, VerificationResult
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,93 @@
+{
+    "name": "SBOM Visualizer Dev",
+    "dockerFile": "../Dockerfile",
+    "target": "dev",
+    "context": "..",
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    "forwardPorts": [
+        8000
+    ],
+    // Use 'postCreateCommand' to run commands after the container is created.
+    "postCreateCommand": "pip install -e .",
+    // Set environment variables
+    "remoteEnv": {
+        "PYTHONPATH": "/app",
+        "ENVIRONMENT": "development"
+    },
+    // Configure tool-specific properties.
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-python.mypy-type-checker",
+                "ms-python.isort",
+                "ms-python.pylint",
+                "ms-vscode.vscode-json",
+                "ms-vscode.vscode-yaml",
+                "ms-vscode.vscode-markdown",
+                "ms-vscode.vscode-docker",
+                "ms-vscode.vscode-git",
+                "ms-vscode.vscode-github",
+                "ms-vscode.vscode-todo-highlight",
+                "ms-vscode.vscode-test-explorer",
+                "ms-vscode.vscode-coverage-gutters"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.flake8Enabled": true,
+                "python.linting.mypyEnabled": true,
+                "python.formatting.provider": "black",
+                "python.formatting.blackArgs": [
+                    "--line-length",
+                    "88"
+                ],
+                "python.sortImports.args": [
+                    "--profile",
+                    "black"
+                ],
+                "python.testing.pytestEnabled": true,
+                "python.testing.pytestArgs": [
+                    "tests/",
+                    "-v",
+                    "--cov=sbom_visualizer",
+                    "--cov-report=term-missing"
+                ],
+                "python.testing.unittestEnabled": false,
+                "python.testing.nosetestsEnabled": false,
+                "editor.formatOnSave": true,
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": true
+                },
+                "files.exclude": {
+                    "**/__pycache__": true,
+                    "**/*.pyc": true,
+                    "**/.pytest_cache": true,
+                    "**/.coverage": true,
+                    "**/htmlcov": true
+                },
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.profiles.linux": {
+                    "bash": {
+                        "path": "/bin/bash",
+                        "icon": "terminal-bash"
+                    }
+                }
+            }
+        }
+    },
+    // Use 'features' to add additional dev container features
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {},
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+    // Use 'mounts' to specify additional mount points
+    "mounts": [
+        "source=${localWorkspaceFolder}/.git,target=/app/.git,type=bind,consistency=cached"
+    ],
+    // Use 'workspaceMount' to specify the workspace mount
+    "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached",
+    "workspaceFolder": "/app"
+}

@@ -6,8 +6,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Set
 
-from ..models.sbom_models import SBOMData, DependencyTree
-
+from ..models.sbom_models import DependencyTree, SBOMData
 
 logger = logging.getLogger(__name__)
 

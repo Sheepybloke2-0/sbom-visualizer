@@ -33,22 +33,54 @@ COPY . .
 # Development stage
 FROM base as dev
 
+# Install additional system dependencies for development
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    vim \
+    nano \
+    tree \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install development dependencies
 RUN pip install --no-cache-dir \
     pytest \
     pytest-cov \
+    pytest-mock \
     black \
     flake8 \
-    mypy
+    mypy \
+    isort \
+    pre-commit \
+    ipython \
+    ipdb \
+    watchdog \
+    fastapi \
+    uvicorn[standard] \
+    httpx
 
 # Set development environment
-ENV ENVIRONMENT=development
+ENV ENVIRONMENT=development \
+    PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Create development user
+RUN useradd --create-home --shell /bin/bash --uid 1000 devuser && \
+    chown -R devuser:devuser /app
+
+# Switch to development user
+USER devuser
 
 # Expose port for development server
 EXPOSE 8000
 
-# Default command for development
-CMD ["python", "-m", "sbom_visualizer", "--help"]
+# Create development workspace
+WORKDIR /app
+
+# Default command for development (interactive shell)
+CMD ["/bin/bash"]
 
 # Test stage
 FROM base as test

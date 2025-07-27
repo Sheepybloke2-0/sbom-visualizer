@@ -2,11 +2,12 @@
 Tests for CLI functionality.
 """
 
+import json
+import tempfile
+from pathlib import Path
+
 import pytest
 from click.testing import CliRunner
-from pathlib import Path
-import tempfile
-import json
 
 from sbom_visualizer.cli import cli
 

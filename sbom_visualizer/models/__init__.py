@@ -5,16 +5,16 @@ Defines the core data structures used throughout the application.
 """
 
 from .sbom_models import (
-    SBOMData,
-    Package,
-    License,
+    AnalysisResult,
     Dependency,
-    Vulnerability,
+    DependencyTree,
+    License,
+    Package,
+    PackageInfo,
+    SBOMData,
     SBOMFormat,
     VerificationResult,
-    AnalysisResult,
-    PackageInfo,
-    DependencyTree,
+    Vulnerability,
 )
 
 __all__ = [

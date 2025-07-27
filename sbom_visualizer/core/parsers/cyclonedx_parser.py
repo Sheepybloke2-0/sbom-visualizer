@@ -8,17 +8,16 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from ...models.sbom_models import (
+    Dependency,
+    License,
+    Package,
     SBOMData,
     SBOMFormat,
-    Package,
-    License,
-    Dependency,
     Vulnerability,
 )
-
 
 logger = logging.getLogger(__name__)
 
