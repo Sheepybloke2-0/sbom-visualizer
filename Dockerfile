@@ -10,13 +10,16 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies
+# Install system dependencies and uv
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libxml2-dev \
     libxslt-dev \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv
 
 # Set work directory
 WORKDIR /app
@@ -24,11 +27,14 @@ WORKDIR /app
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies using uv
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Install the application in development mode using uv
+RUN uv pip install --system -e .
 
 # Development stage
 FROM base as dev
@@ -36,7 +42,6 @@ FROM base as dev
 # Install additional system dependencies for development
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
     wget \
     vim \
     nano \
@@ -44,8 +49,8 @@ RUN apt-get update && apt-get install -y \
     htop \
     && rm -rf /var/lib/apt/lists/*
 
-# Install development dependencies
-RUN pip install --no-cache-dir \
+# Install development dependencies using uv
+RUN uv pip install --system --no-cache \
     pytest \
     pytest-cov \
     pytest-mock \
@@ -85,8 +90,8 @@ CMD ["/bin/bash"]
 # Test stage
 FROM base as test
 
-# Install test dependencies
-RUN pip install --no-cache-dir \
+# Install test dependencies using uv
+RUN uv pip install --system --no-cache \
     pytest \
     pytest-cov \
     pytest-mock
@@ -108,8 +113,8 @@ CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=sbom_visualizer", "--cov-r
 # Production stage
 FROM base as prod
 
-# Install production dependencies only
-RUN pip install --no-cache-dir \
+# Install production dependencies only using uv
+RUN uv pip install --system --no-cache \
     gunicorn \
     uvicorn
 
@@ -123,5 +128,5 @@ USER appuser
 # Expose port for production server
 EXPOSE 8000
 
-# Default command for production
-CMD ["python", "-m", "sbom_visualizer", "--help"]
+# Default command for production - show help
+CMD ["sbom-analyzer", "--help"]

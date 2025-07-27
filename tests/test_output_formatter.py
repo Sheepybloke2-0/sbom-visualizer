@@ -5,15 +5,16 @@ Tests the output formatting functionality.
 """
 
 import json
-import pytest
 from unittest.mock import Mock
 
-from sbom_visualizer.utils.output_formatter import OutputFormatter
+import pytest
+
 from sbom_visualizer.models.sbom_models import (
     AnalysisResult,
     DependencyTree,
     PackageInfo,
 )
+from sbom_visualizer.utils.output_formatter import OutputFormatter
 
 
 class TestOutputFormatter:

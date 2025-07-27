@@ -28,6 +28,8 @@ class DependencyViewer:
                 root_packages=[],
                 depth_analysis={},
                 circular_dependencies=[],
+                total_dependencies=0,
+                max_depth=0,
             )
 
         # Build dependency graph
@@ -58,17 +60,19 @@ class DependencyViewer:
         # Build tree structure
         tree_structure = {}
         for package in sbom_data.packages:
-            tree_structure[package.name] = {
-                "dependencies": dependency_graph[package.name],
-                "dependents": reverse_graph[package.name],
-                "depth": depth_analysis[package.name],
-            }
+            tree_structure[package.name] = dependency_graph[package.name]
+
+        # Calculate total dependencies and max depth
+        total_dependencies = sum(len(deps) for deps in dependency_graph.values())
+        max_depth = max(depth_analysis.values()) if depth_analysis else 0
 
         return DependencyTree(
             tree_structure=tree_structure,
             root_packages=root_packages,
             depth_analysis=depth_analysis,
             circular_dependencies=circular_dependencies,
+            total_dependencies=total_dependencies,
+            max_depth=max_depth,
         )
 
     def _calculate_package_depth(
@@ -169,13 +173,13 @@ class DependencyViewer:
             key=lambda x: dependency_tree.depth_analysis.get(x[0], 0),
         )
 
-        for package_name, package_info in sorted_packages:
-            depth = package_info["depth"]
+        for package_name, dependencies in sorted_packages:
+            depth = dependency_tree.depth_analysis.get(package_name, 0)
             indent = "  " * depth
             output.append(f"{indent}📦 {package_name}")
 
             # Show dependencies
-            for dep in package_info["dependencies"]:
+            for dep in dependencies:
                 dep_indent = "  " * (depth + 1)
                 output.append(f"{dep_indent}└── {dep}")
 

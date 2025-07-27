@@ -1,268 +1,219 @@
 # SBOM Visualizer
 
-A comprehensive tool for analyzing and visualizing Software Bill of Materials (SBOMs). The goal is to be an AI-powered SBOM analysis and visualization tool that allows users to easily parse and understand SBOMs. Think of it as the "Notebook LM" version of SBOM analysis.
-
-## 🎯 Features
-
-- **Multi-Format Support**: Automatically detects and parses SPDX 3.0, CycloneDX 1.5, and SWID formats
-- **Comprehensive Analysis**: Package counting, license distribution, vulnerability assessment, dependency analysis
-- **Multiple Output Formats**: Text (CLI-friendly), JSON, Markdown, and HTML with modern styling
-- **AI Integration**: Claude-powered CVE checking, license analysis, and intelligent insights (Stage 4)
-- **Web Interface**: Interactive visualization and analysis (Stage 2)
+AI-powered SBOM analysis and visualization tool for comprehensive Software Bill of Materials insights.
 
 ## 🚀 Quick Start
 
-### Using Python (Local Installation)
+### Using Docker (Recommended)
 
-#### 1. Install Dependencies
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
+# Clone the repository
+git clone https://github.com/your-org/sbom-visualizer.git
+cd sbom-visualizer
 
-# Install the package in development mode
-pip install -e .
+# Run the quick start script
+./scripts/quick-start.sh
+
+# Or use individual commands
+make analyze FILE=examples/sample.spdx.json
+make verify FILE=examples/sample.cyclonedx.json
+make dep FILE=examples/sample.spdx.json
+make check-pkg FILE=examples/sample.spdx.json PKG=flask
+make scan FILE=examples/sample.spdx.json
 ```
 
-#### 2. Basic Usage
+### Direct Docker Commands
+
 ```bash
+# Build the Docker image
+docker build --target prod -t sbom-visualizer:prod .
+
 # Analyze an SBOM file
-sbom-analyzer analyze examples/sample.spdx.json
+docker run --rm -v $(pwd):/app sbom-visualizer:prod sbom-analyzer analyze examples/sample.spdx.json
 
-# Verify SBOM validity
-sbom-analyzer verify examples/sample.spdx.json
-
-# Show dependency tree
-sbom-analyzer dep examples/sample.spdx.json
-
-# Get package details
-sbom-analyzer check-pkg examples/sample.spdx.json requests
-```
-
-#### 3. Advanced Usage
-```bash
-# Generate HTML report
-sbom-analyzer analyze examples/sample.spdx.json -t html -o report.html
-
-# Export JSON analysis
-sbom-analyzer analyze examples/sample.spdx.json -t json -o analysis.json
-
-# Generate Markdown documentation
-sbom-analyzer dep examples/sample.spdx.json -t markdown -o dependencies.md
-
-# Verbose output for debugging
-sbom-analyzer --verbose analyze examples/sample.spdx.json
-```
-
-### Using Docker
-
-#### 1. Build and Run
-```bash
-# Build the development image
-make build-dev
-
-# Run analysis in container
-docker run --rm -v $(pwd):/app sbom-visualizer:dev sbom-analyzer analyze examples/sample.spdx.json
-
-# Run with interactive shell
-docker run --rm -it -v $(pwd):/app sbom-visualizer:dev bash
-```
-
-#### 2. Docker Compose (Full Environment)
-```bash
-# Start development environment with MongoDB
-docker-compose --profile dev up --build
-
-# Run tests in container
-make test-docker
-
-# Clean up containers
-docker-compose down
-```
-
-## 📋 CLI Commands
-
-### Basic Commands
-
-```bash
-# Analyze SBOM and generate report
-sbom-analyzer analyze <file> [options]
-
-# Verify SBOM validity and completeness
-sbom-analyzer verify <file>
+# Verify SBOM compliance
+docker run --rm -v $(pwd):/app sbom-visualizer:prod sbom-analyzer verify examples/sample.spdx.json
 
 # Show dependency tree
-sbom-analyzer dep <file> [options]
+docker run --rm -v $(pwd):/app sbom-visualizer:prod sbom-analyzer dep examples/sample.spdx.json
 
-# Get detailed package information
-sbom-analyzer check-pkg <file> <package-name>
+# Check specific package
+docker run --rm -v $(pwd):/app sbom-visualizer:prod sbom-analyzer check-pkg examples/sample.spdx.json flask
 
-# Scan for vulnerabilities (Stage 4)
-sbom-analyzer scan <file> [options]
+# Comprehensive scan
+docker run --rm -v $(pwd):/app sbom-visualizer:prod sbom-analyzer scan examples/sample.spdx.json
 ```
 
-### Command Options
+## 📋 Available Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `analyze` | Analyze SBOM and provide insights | `sbom-analyzer analyze file.json` |
+| `verify` | Verify SBOM compliance | `sbom-analyzer verify file.json` |
+| `dep` | Show dependency tree | `sbom-analyzer dep file.json` |
+| `check-pkg` | Check specific package | `sbom-analyzer check-pkg file.json package-name` |
+| `scan` | Comprehensive scan | `sbom-analyzer scan file.json` |
+
+### Output Formats
+
+All commands support multiple output formats:
 
 ```bash
-# Global options
---verbose          # Increase log level to DEBUG
---quiet           # Decrease log level to WARN
---version         # Show version information
+# Text output (default)
+sbom-analyzer analyze file.json
 
-# Output options (for analyze, dep, scan)
--o, --output      # Specify output filename
--t, --type        # Output type: text, json, markdown, html
+# JSON output
+sbom-analyzer analyze file.json --output json
+
+# HTML output
+sbom-analyzer analyze file.json --output html
+
+# Markdown output
+sbom-analyzer analyze file.json --output markdown
+
+# Save to file
+sbom-analyzer analyze file.json --output-file analysis.html
 ```
 
-### Output Types
+## 📁 Example Files
 
-- **text**: Human-readable CLI output with emojis and formatting
-- **json**: Structured data for programmatic processing
-- **markdown**: Documentation-friendly format
-- **html**: Modern, styled output with dark mode support
+The project includes several example SBOM files:
 
-## 🔧 Development
+- `examples/sample.spdx.json` - Basic SPDX example with dependencies
+- `examples/sample.cyclonedx.json` - CycloneDX format example
+- `examples/sample-with-vulnerabilities.spdx.json` - SPDX with vulnerability data
 
-### Local Development Setup
+## 🛠️ Development
+
+### Prerequisites
+
+- Python 3.9+
+- Docker (for containerized development)
+
+### Local Development
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd spdx-visualizer
-
 # Install dependencies
-pip install -r requirements.txt
-pip install -e .
+make install
 
 # Run tests
-pytest tests/ -v --cov=sbom_visualizer
+make test
 
 # Format code
-black sbom_visualizer/ tests/
+make format
 
 # Lint code
-flake8 sbom_visualizer/ tests/
+make lint
 ```
 
 ### Docker Development
 
 ```bash
-# Build all images
-make build-dev
-make build-test
-make build-prod
-
-# Run tests
+# Run tests in Docker
 make test-docker
 
-# Development environment
-make run-dev
+# Format code in Docker
+make format-docker
 
-# Production environment
-make run-prod
+# Lint code in Docker
+make lint-docker
 
-# Clean up
-make clean
+# Development shell
+make dev-shell
 ```
 
-### Testing
+## 📊 Features
+
+### 🔍 Analysis
+- Package counting and categorization
+- License distribution analysis
+- Vulnerability summary by severity
+- Dependency depth analysis
+- Completeness scoring (0-100%)
+- Intelligent recommendations
+
+### ✅ Verification
+- Format compliance checking
+- License compliance validation
+- Dependency completeness verification
+- Metadata validation
+- Overall quality scoring
+
+### 🌳 Dependency Visualization
+- Interactive dependency trees
+- Circular dependency detection
+- Depth analysis
+- Root package identification
+- Multiple output formats
+
+### 📦 Package Information
+- Detailed package metadata
+- Dependency relationships
+- License information
+- Vulnerability data
+- Version constraints
+
+## 🐳 Docker Support
+
+The project includes comprehensive Docker support with multiple stages:
+
+- **Development**: Full development environment with debugging tools
+- **Testing**: Optimized for running tests and coverage
+- **Production**: Minimal production image with the application
+
+### Docker Commands
 
 ```bash
-# Run all tests with coverage
-make test-docker
+# Build different stages
+make build-dev    # Development environment
+make build-test   # Testing environment  
+make build-prod   # Production environment
 
-# Run specific test file
-pytest tests/test_analyzer.py -v
+# Run containers
+make run-dev      # Development server
+make run-prod     # Production server
 
-# Run with coverage report
-pytest --cov=sbom_visualizer --cov-report=term-missing
-
-# Run tests in Docker
-docker run --rm -v $(pwd):/app sbom-visualizer:test
+# Development tools
+make dev-shell    # Interactive development shell
 ```
 
-## 📊 Example Output
+## 📚 Documentation
 
-### Text Analysis Report
-```
-📊 SBOM Analysis Report
-==================================================
-📦 Total Packages: 3
-📋 Unique Licenses: 2
-🎯 Completeness Score: 85.5%
-
-📜 License Distribution:
-- MIT: 2 packages
-- Apache-2.0: 1 package
-
-⚠️ Vulnerability Summary:
-- HIGH: 1 vulnerability
-- MEDIUM: 0 vulnerabilities
-- LOW: 0 vulnerabilities
-
-💡 Recommendations:
-1. Add dependency information for packages
-2. Consider updating vulnerable packages
-```
-
-### HTML Report
-Generates modern, styled HTML reports with:
-- Responsive design
-- Dark mode support
-- Interactive elements
-- Professional styling
-
-## 🏗️ Architecture
-
-### Technology Stack
-- **Backend**: Python 3.12+, FastAPI, GraphQL (Strawberry)
-- **CLI**: Click framework
-- **Data Validation**: Pydantic models
-- **Testing**: pytest with coverage
-- **Containerization**: Docker multi-stage builds
-- **Database**: MongoDB (Stage 3)
-
-### Project Structure
-```
-sbom_visualizer/
-├── cli.py                 # CLI interface
-├── core/                  # Core functionality
-│   ├── analyzer.py       # SBOM analysis
-│   ├── parser.py         # SBOM parsing
-│   ├── verifier.py       # SBOM validation
-│   └── parsers/          # Format-specific parsers
-├── models/               # Data models
-├── utils/                # Utilities
-└── tests/                # Test suite
-```
-
-## 📈 Development Stages
-
-- **✅ Stage 1**: CLI Tool (COMPLETED)
-- **🔄 Stage 2**: Web Interface
-- **⏳ Stage 3**: User Management
-- **⏳ Stage 4**: AI Integration
-
-## 🔐 Security & Configuration
-
-- **API Keys**: Stored using SOPS, .netrc, and environment variables
-- **Secrets Management**: Secure handling of sensitive data
-- **Input Validation**: Comprehensive validation of SBOM files
-- **Error Handling**: Graceful error management and reporting
+- [Usage Guide](docs/USAGE.md) - Detailed usage instructions
+- [Docker Examples](examples/docker-examples.md) - Docker-specific examples
+- [API Documentation](docs/API.md) - API reference (coming soon)
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure code coverage remains high
-6. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Setup
+
+```bash
+# Clone and setup
+git clone https://github.com/your-org/sbom-visualizer.git
+cd sbom-visualizer
+
+# Install in development mode
+make install
+
+# Run tests
+make test-docker
+
+# Start development
+make dev-shell
+```
 
 ## 📄 License
 
-[License information to be added]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
+## 🙏 Acknowledgments
 
-**Current Status**: Stage 1 Complete (65% test coverage)  
-**Next Milestone**: Stage 2 - Web Interface Development
+- SPDX community for the SBOM standard
+- CycloneDX for the comprehensive SBOM format
+- Open source community for inspiration and tools

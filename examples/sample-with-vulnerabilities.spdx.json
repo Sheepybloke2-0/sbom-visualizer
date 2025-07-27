@@ -2,8 +2,8 @@
     "spdxVersion": "SPDX-2.3",
     "dataLicense": "CC0-1.0",
     "SPDXID": "SPDXRef-DOCUMENT",
-    "documentName": "Sample SPDX Document",
-    "documentNamespace": "https://spdx.org/spdxdocs/sample-project-1.0.0",
+    "documentName": "Sample SPDX Document with Vulnerabilities",
+    "documentNamespace": "https://spdx.org/spdxdocs/vulnerable-project-1.0.0",
     "creationInfo": {
         "creators": [
             "Tool: SBOM Visualizer"
@@ -14,7 +14,7 @@
         {
             "SPDXID": "SPDXRef-Package-requests",
             "name": "requests",
-            "versionInfo": "2.31.0",
+            "versionInfo": "2.28.0",
             "description": "Python HTTP for Humans",
             "licenseDeclared": "Apache-2.0",
             "licenseConcluded": "Apache-2.0",
@@ -23,14 +23,14 @@
             "externalRefs": [
                 {
                     "referenceType": "purl",
-                    "referenceLocator": "pkg:pypi/requests@2.31.0"
+                    "referenceLocator": "pkg:pypi/requests@2.28.0"
                 }
             ]
         },
         {
             "SPDXID": "SPDXRef-Package-flask",
             "name": "flask",
-            "versionInfo": "3.0.0",
+            "versionInfo": "2.2.0",
             "description": "A simple framework for building complex web applications",
             "licenseDeclared": "BSD-3-Clause",
             "licenseConcluded": "BSD-3-Clause",
@@ -39,14 +39,14 @@
             "externalRefs": [
                 {
                     "referenceType": "purl",
-                    "referenceLocator": "pkg:pypi/flask@3.0.0"
+                    "referenceLocator": "pkg:pypi/flask@2.2.0"
                 }
             ]
         },
         {
             "SPDXID": "SPDXRef-Package-sqlalchemy",
             "name": "sqlalchemy",
-            "versionInfo": "2.0.23",
+            "versionInfo": "1.4.50",
             "description": "Database Abstraction Library",
             "licenseDeclared": "MIT",
             "licenseConcluded": "MIT",
@@ -55,14 +55,14 @@
             "externalRefs": [
                 {
                     "referenceType": "purl",
-                    "referenceLocator": "pkg:pypi/sqlalchemy@2.0.23"
+                    "referenceLocator": "pkg:pypi/sqlalchemy@1.4.50"
                 }
             ]
         },
         {
             "SPDXID": "SPDXRef-Package-urllib3",
             "name": "urllib3",
-            "versionInfo": "2.0.7",
+            "versionInfo": "1.26.15",
             "description": "HTTP library with thread-safe connection pooling",
             "licenseDeclared": "MIT",
             "licenseConcluded": "MIT",
@@ -71,7 +71,7 @@
             "externalRefs": [
                 {
                     "referenceType": "purl",
-                    "referenceLocator": "pkg:pypi/urllib3@2.0.7"
+                    "referenceLocator": "pkg:pypi/urllib3@1.26.15"
                 }
             ]
         }
@@ -96,16 +96,6 @@
             "spdxElementId": "SPDXRef-DOCUMENT",
             "relatedSpdxElementId": "SPDXRef-Package-urllib3",
             "relationshipType": "DESCRIBES"
-        },
-        {
-            "spdxElementId": "SPDXRef-Package-flask",
-            "relatedSpdxElementId": "SPDXRef-Package-requests",
-            "relationshipType": "DEPENDS_ON"
-        },
-        {
-            "spdxElementId": "SPDXRef-Package-requests",
-            "relatedSpdxElementId": "SPDXRef-Package-urllib3",
-            "relationshipType": "DEPENDS_ON"
         }
     ]
 }

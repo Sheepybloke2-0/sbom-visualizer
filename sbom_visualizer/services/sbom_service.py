@@ -153,7 +153,7 @@ class SBOMService:
         """
         try:
             logger.info(f"Generating dependency tree for: {sbom_data.document_name}")
-            dependency_tree = self.dependency_viewer.generate_tree(sbom_data)
+            dependency_tree = self.dependency_viewer.build_dependency_tree(sbom_data)
             logger.info(
                 f"Dependency tree generated with {dependency_tree.total_dependencies} dependencies"
             )

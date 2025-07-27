@@ -26,6 +26,7 @@
 - [ ] Avoid coding issues defined OWASP Top 10
 - [ ] Avoid coding issues defined in MITRE Top 25 CWEs
 - [ ] User passwords salted and hashed
+- [ ] All code should be run in docker with no local dependencies
 
 ## Performance
 - [ ] Efficient data structures

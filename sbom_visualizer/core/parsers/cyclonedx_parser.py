@@ -6,10 +6,18 @@ Provides functionality to parse CycloneDX format SBOM files.
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from ...models.sbom_models import Package, SBOMData, Vulnerability
+from ...models.sbom_models import (
+    Dependency,
+    License,
+    Package,
+    SBOMData,
+    SBOMFormat,
+    Vulnerability,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,22 +54,42 @@ class CycloneDXParser:
 
         # Extract metadata
         metadata = data.get("metadata", {})
-        document_name = metadata.get("component", {}).get("name", "Unknown")
-        document_version = metadata.get("component", {}).get("version", "Unknown")
+        component_info = metadata.get("component", {})
+        document_name = component_info.get("name", "Unknown")
+        document_version = component_info.get("version", "Unknown")
+
+        # Parse timestamp
+        timestamp_str = metadata.get("timestamp", "2024-01-01T00:00:00Z")
+        try:
+            created = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+        except ValueError:
+            created = datetime.now()
 
         # Parse packages
         packages = []
+        package_map = {}  # Map purl to Package object
         components = data.get("components", [])
 
         for component in components:
             package = self._parse_component(component)
             packages.append(package)
+            if package.purl:
+                package_map[package.purl] = package
+
+        # Parse dependencies
+        dependencies_data = data.get("dependencies", [])
+        self._parse_dependencies(dependencies_data, package_map)
 
         return SBOMData(
+            format=SBOMFormat.CYCLONEDX,
+            version=data.get("specVersion", "1.5"),
             document_name=document_name,
-            document_version=document_version,
+            document_namespace=f"https://cyclonedx.org/bom/{document_name}-{document_version}",
+            created=created,
+            creator="CycloneDX Generator",
             packages=packages,
-            relationships=[],
+            relationships=dependencies_data,
+            metadata=data,
         )
 
     def _parse_component(self, component: Dict[str, Any]) -> Package:
@@ -69,12 +97,17 @@ class CycloneDXParser:
         name = component.get("name", "Unknown")
         version = component.get("version", "Unknown")
         description = component.get("description", "")
+        purl = component.get("purl", "")
+
+        # Generate ID from purl or name
+        package_id = purl if purl else f"pkg:{name}@{version}"
 
         # Parse licenses
         licenses = []
         for license_info in component.get("licenses", []):
-            license_name = license_info.get("license", {}).get("name", "Unknown")
-            licenses.append(license_name)
+            license_data = license_info.get("license", {})
+            license_id = license_data.get("id", "Unknown")
+            licenses.append(License(identifier=license_id))
 
         # Parse vulnerabilities
         vulnerabilities = []
@@ -89,14 +122,38 @@ class CycloneDXParser:
                 )
             )
 
-        # Parse dependencies (simplified)
+        # Parse dependencies (will be populated later)
         dependencies = []
 
         return Package(
+            id=package_id,
             name=name,
             version=version,
             description=description,
             licenses=licenses,
             vulnerabilities=vulnerabilities,
             dependencies=dependencies,
+            purl=purl,
         )
+
+    def _parse_dependencies(self, dependencies_data: list, package_map: dict):
+        """Parse dependencies and populate package dependencies."""
+        for dep_info in dependencies_data:
+            ref = dep_info.get("ref", "")
+            depends_on = dep_info.get("dependsOn", [])
+
+            # Find the source package
+            source_package = package_map.get(ref)
+            if source_package:
+                for dep_ref in depends_on:
+                    # Create dependency object
+                    dependency = Dependency(
+                        package_id=dep_ref,
+                        package_name=(
+                            dep_ref.split("@")[0].split("/")[-1]
+                            if "@" in dep_ref
+                            else dep_ref
+                        ),
+                        relationship_type="DEPENDS_ON",
+                    )
+                    source_package.dependencies.append(dependency)

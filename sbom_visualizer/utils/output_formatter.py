@@ -4,9 +4,9 @@ Output formatter for SBOM Visualizer.
 Provides functionality to format analysis results in various output formats.
 """
 
+import json
 import logging
 from typing import Any, Union
-import json
 
 from ..models.sbom_models import AnalysisResult, DependencyTree, PackageInfo
 

@@ -4,17 +4,18 @@ Tests for SBOM Analyzer.
 Tests the analysis functionality for SBOM data.
 """
 
-import pytest
 from datetime import datetime
 from unittest.mock import Mock
 
+import pytest
+
 from sbom_visualizer.core.analyzer import SBOMAnalyzer
 from sbom_visualizer.models.sbom_models import (
+    Dependency,
+    License,
+    Package,
     SBOMData,
     SBOMFormat,
-    Package,
-    License,
-    Dependency,
     Vulnerability,
 )
 

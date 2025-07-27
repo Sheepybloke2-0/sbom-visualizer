@@ -1,6 +1,6 @@
 # Makefile for SBOM Visualizer
 
-.PHONY: help build-dev build-test build-prod test test-docker run-dev run-prod clean install lint format format-docker lint-docker test-docker-cov dev-shell
+.PHONY: help build-dev build-test build-prod test test-docker run-dev run-prod clean install lint format format-docker lint-docker test-docker-cov dev-shell analyze verify dep check-pkg scan
 
 # Default target
 help:
@@ -23,6 +23,13 @@ help:
 	@echo "  make build-dev   - Build development Docker image"
 	@echo "  make build-test  - Build test Docker image"
 	@echo "  make build-prod  - Build production Docker image"
+	@echo ""
+	@echo "SBOM Analysis Commands (Docker):"
+	@echo "  make analyze FILE=path/to/sbom.json - Analyze SBOM file"
+	@echo "  make verify FILE=path/to/sbom.json  - Verify SBOM file"
+	@echo "  make dep FILE=path/to/sbom.json     - Show dependency tree"
+	@echo "  make check-pkg FILE=path/to/sbom.json PKG=package-name - Check specific package"
+	@echo "  make scan FILE=path/to/sbom.json    - Comprehensive scan"
 	@echo ""
 	@echo "Docker Run:"
 	@echo "  make run-dev     - Run development container"
@@ -79,6 +86,47 @@ build-test:
 
 build-prod:
 	docker build --target prod -t sbom-visualizer:prod .
+
+# SBOM Analysis Commands (Docker)
+analyze:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE parameter is required. Usage: make analyze FILE=path/to/sbom.json"; \
+		exit 1; \
+	fi
+	docker build --target prod -t sbom-visualizer:prod .
+	docker run --rm -v $(PWD):/app sbom-visualizer:prod sbom-analyzer analyze $(FILE)
+
+verify:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE parameter is required. Usage: make verify FILE=path/to/sbom.json"; \
+		exit 1; \
+	fi
+	docker build --target prod -t sbom-visualizer:prod .
+	docker run --rm -v $(PWD):/app sbom-visualizer:prod sbom-analyzer verify $(FILE)
+
+dep:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE parameter is required. Usage: make dep FILE=path/to/sbom.json"; \
+		exit 1; \
+	fi
+	docker build --target prod -t sbom-visualizer:prod .
+	docker run --rm -v $(PWD):/app sbom-visualizer:prod sbom-analyzer dep $(FILE)
+
+check-pkg:
+	@if [ -z "$(FILE)" ] || [ -z "$(PKG)" ]; then \
+		echo "Error: FILE and PKG parameters are required. Usage: make check-pkg FILE=path/to/sbom.json PKG=package-name"; \
+		exit 1; \
+	fi
+	docker build --target prod -t sbom-visualizer:prod .
+	docker run --rm -v $(PWD):/app sbom-visualizer:prod sbom-analyzer check-pkg $(FILE) $(PKG)
+
+scan:
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE parameter is required. Usage: make scan FILE=path/to/sbom.json"; \
+		exit 1; \
+	fi
+	docker build --target prod -t sbom-visualizer:prod .
+	docker run --rm -v $(PWD):/app sbom-visualizer:prod sbom-analyzer scan $(FILE)
 
 # Docker run commands
 run-dev:

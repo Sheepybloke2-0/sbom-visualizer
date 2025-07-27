@@ -62,9 +62,15 @@ class SPDXParser:
 
         # Parse packages
         packages = []
+        package_map = {}  # Map SPDXID to Package object
         for package_data in data.get("packages", []):
             package = self._parse_package(package_data)
             packages.append(package)
+            package_map[package.id] = package
+
+        # Parse relationships and build dependencies
+        relationships = data.get("relationships", [])
+        self._parse_relationships(relationships, package_map)
 
         return SBOMData(
             format=SBOMFormat.SPDX,
@@ -74,7 +80,7 @@ class SPDXParser:
             created=created,
             creator=creator,
             packages=packages,
-            relationships=data.get("relationships", []),
+            relationships=relationships,
             metadata=data,
         )
 
@@ -114,3 +120,29 @@ class SPDXParser:
             vulnerabilities=vulnerabilities,
             dependencies=dependencies,
         )
+
+    def _parse_relationships(self, relationships: list, package_map: dict):
+        """Parse relationships and populate package dependencies."""
+        from ...models.sbom_models import Dependency
+
+        for rel in relationships:
+            relationship_type = rel.get("relationshipType", "")
+
+            # Only process DEPENDS_ON relationships
+            if relationship_type == "DEPENDS_ON":
+                source_id = rel.get("spdxElementId", "")
+                target_id = rel.get("relatedSpdxElementId", "")
+
+                # Find the source package
+                source_package = package_map.get(source_id)
+                if source_package:
+                    # Only create dependency if target package exists
+                    target_package = package_map.get(target_id)
+                    if target_package:
+                        # Create dependency object
+                        dependency = Dependency(
+                            package_id=target_id,
+                            package_name=target_id.replace("SPDXRef-Package-", ""),
+                            relationship_type="DEPENDS_ON",
+                        )
+                        source_package.dependencies.append(dependency)
